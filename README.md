@@ -89,8 +89,4 @@ lib/
 - Tombol telepon perawat
 - Tombol keluar dengan konfirmasi
 
-## Perbaikan Sesuai Permintaan
-1. ✅ Riwayat: gambar obat = ikon (bukan foto)
-2. ✅ Riwayat: angka % kepatuhan di tengah donut (Stack + alignment center)
-3. ✅ Semua fitur berfungsi dengan state management dasar
-4. ✅ Khusus fitur pasien (bukan petugas kesehatan)
+
