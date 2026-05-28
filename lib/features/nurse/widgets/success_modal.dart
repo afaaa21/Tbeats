@@ -62,7 +62,7 @@ class SuccessModal extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.success.withOpacity(0.1)),
               ),
-              child: Column(
+              child: const Column(
                 children: [
                   _CredentialRow(
                     label: 'EMAIL',
@@ -93,9 +93,9 @@ class SuccessModal extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: AppColors.warning.withOpacity(0.2)),
               ),
-              child: Row(
+              child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Icon(Icons.warning_outlined, color: AppColors.warning, size: 20),
                   SizedBox(width: 8),
                   Expanded(

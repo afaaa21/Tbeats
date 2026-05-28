@@ -158,8 +158,8 @@ class ReportDetailScreen extends StatelessWidget {
                         color: AppColors.warning.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(99),
                       ),
-                      child: Row(
-                        children: const [
+                      child: const Row(
+                        children: [
                           Icon(Icons.schedule, color: AppColors.warning, size: 16),
                           SizedBox(width: 6),
                           Text(

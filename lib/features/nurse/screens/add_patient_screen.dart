@@ -33,8 +33,8 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
           children: [
             // ===== SECTION: Data Akun Pasien =====
-            Row(
-              children: const [
+            const Row(
+              children: [
                 Icon(Icons.person_add_outlined, color: AppColors.primary, size: 20),
                 SizedBox(width: 8),
                 Text(
@@ -138,8 +138,8 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
             const SizedBox(height: 24),
 
             // ===== SECTION: Data Pengobatan =====
-            Row(
-              children: const [
+            const Row(
+              children: [
                 Icon(Icons.medical_information_outlined, color: AppColors.primary, size: 20),
                 SizedBox(width: 8),
                 Text(
@@ -248,7 +248,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      value: '6',
+                      initialValue: '6',
                       decoration: const InputDecoration(
                         suffixIcon: Icon(Icons.expand_more, color: AppColors.outline),
                       ),

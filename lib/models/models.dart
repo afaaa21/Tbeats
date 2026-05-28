@@ -20,6 +20,7 @@ class Medication {
   final String dose;
   final String schedule; // Pagi / Malam
   final TimeOfDay time;
+  final String? notes; // catatan dari pasien / dokter
   MedicationStatus status;
   String? photoPath;
   DateTime? reportedAt;
@@ -30,6 +31,7 @@ class Medication {
     required this.dose,
     required this.schedule,
     required this.time,
+    this.notes,
     this.status = MedicationStatus.belumWaktunya,
     this.photoPath,
     this.reportedAt,
@@ -50,6 +52,7 @@ class Medication {
       dose: json['dose'],
       schedule: json['schedule'],
       time: timeOfDay,
+      notes: json['notes'],
       status: MedicationStatusExtension.fromJsonString(json['status'] ?? 'belumWaktunya'),
       photoPath: json['photoPath'],
       reportedAt: json['reportedAt'] != null ? DateTime.parse(json['reportedAt']) : null,
@@ -67,6 +70,7 @@ class Medication {
       'status': status.toJsonString(),
       'photoPath': photoPath,
       'reportedAt': reportedAt?.toIso8601String(),
+      'notes': notes,
     };
   }
 }

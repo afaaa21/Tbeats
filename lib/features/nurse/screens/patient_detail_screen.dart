@@ -89,17 +89,17 @@ class _TodayEvidenceTab extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border(left: BorderSide(color: AppColors.warning, width: 4)),
+            border: const Border(left: BorderSide(color: AppColors.warning, width: 4)),
             boxShadow: [
               BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12)
             ],
           ),
           child: Row(
             children: [
-              CircleAvatar(
+              const CircleAvatar(
                 radius: 20,
                 backgroundColor: AppColors.surfaceContainer,
-                child: const Text(
+                child: Text(
                   'BS',
                   style: TextStyle(
                     color: AppColors.primary,
@@ -154,9 +154,9 @@ class _TodayEvidenceTab extends StatelessWidget {
         ),
         const SizedBox(height: 24),
 
-        Row(
+        const Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: const [
+          children: [
             Text(
               'Verifikasi Obat',
               style: TextStyle(
@@ -207,7 +207,7 @@ class _TodayEvidenceTab extends StatelessWidget {
         const SizedBox(height: 12),
 
         // Obat 3 - Missed
-        _MedicineVerificationCard(
+        const _MedicineVerificationCard(
           medicineName: 'Pirazinamid',
           status: MedicineStatus.missed,
           time: null,
@@ -325,7 +325,7 @@ class _MedicineVerificationCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          Icon(Icons.access_time, size: 12, color: AppColors.textSecondary),
+                          const Icon(Icons.access_time, size: 12, color: AppColors.textSecondary),
                           const SizedBox(width: 2),
                           Text(
                             time!,
@@ -338,8 +338,8 @@ class _MedicineVerificationCard extends StatelessWidget {
                         ],
                       )
                     else
-                      Row(
-                        children: const [
+                      const Row(
+                        children: [
                           Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textSecondary),
                           SizedBox(width: 4),
                           Text(

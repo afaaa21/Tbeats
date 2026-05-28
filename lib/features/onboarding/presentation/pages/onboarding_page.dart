@@ -1,45 +1,42 @@
 import 'package:flutter/material.dart';
-import '../theme.dart';
-import 'login_screen.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../auth/presentation/pages/login_page.dart';
 
-class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+class OnboardingPage extends StatefulWidget {
+  const OnboardingPage({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  State<OnboardingPage> createState() => _OnboardingPageState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingPageState extends State<OnboardingPage> {
   final PageController _controller = PageController();
   int _currentPage = 0;
 
-  final List<_OnboardingPage> _pages = [
-    _OnboardingPage(
+  final List<_OnboardingData> _pages = [
+    _OnboardingData(
       icon: Icons.medication_rounded,
       iconColor: const Color(0xFF4CAF7D),
       title: 'Selamat Datang di TBeats',
       subtitle: 'Pendamping setia perjalanan pengobatan TBC Anda',
       description:
           'TBeats hadir untuk memastikan tidak ada satu pun dosis obat yang terlewat. Bersama, kita wujudkan pengobatan TBC yang tuntas.',
-      isLast: false,
     ),
-    _OnboardingPage(
+    _OnboardingData(
       icon: Icons.camera_alt_rounded,
-      iconColor: const Color(0xFF1B5E37),
+      iconColor: AppColors.primaryContainer,
       title: 'Pantau Setiap Langkah Pengobatan',
       subtitle: 'Laporan harian yang mudah dan terpercaya',
       description:
           'Cukup foto obat sebelum diminum, dan laporan Anda langsung sampai ke perawat dan klinik. Jadwal obat tercatat rapi, riwayat kepatuhan selalu bisa dilihat kapan saja.',
-      isLast: false,
     ),
-    _OnboardingPage(
+    _OnboardingData(
       icon: Icons.group_rounded,
-      iconColor: const Color(0xFF1B5E37),
+      iconColor: AppColors.primaryContainer,
       title: 'Sembuh Itu Perjalanan Bersama',
       subtitle: 'Kamu tidak sendirian dalam proses ini',
       description:
           'Perawat dan klinik Anda selalu memantau perkembangan di setiap langkah. TBC bisa disembuhkan — dan TBeats ada untuk menemanimu hingga tuntas.',
-      isLast: true,
     ),
   ];
 
@@ -54,48 +51,39 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _goToLogin() {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      MaterialPageRoute(builder: (_) => const LoginPage()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.bgGray,
+      backgroundColor: AppColors.background,
       body: Stack(
         children: [
           PageView.builder(
             controller: _controller,
             itemCount: _pages.length,
             onPageChanged: (i) => setState(() => _currentPage = i),
-            itemBuilder: (_, i) => _OnboardingPageWidget(page: _pages[i]),
+            itemBuilder: (_, i) => _OnboardingPageWidget(data: _pages[i]),
           ),
-          // Skip button
           Positioned(
             top: 52,
             right: 24,
             child: TextButton(
               onPressed: _goToLogin,
-              child: Text(
-                'Lewati',
-                style: TextStyle(
-                  color: AppTheme.textGray,
-                  fontSize: 16,
-                ),
-              ),
+              child: const Text('Lewati',
+                  style: TextStyle(
+                      color: AppColors.textSecondary, fontSize: 16)),
             ),
           ),
-          // Bottom controls
           Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
+            bottom: 0, left: 0, right: 0,
             child: Container(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 48),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Dots
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(_pages.length, (i) {
@@ -106,7 +94,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         height: 8,
                         decoration: BoxDecoration(
                           color: i == _currentPage
-                              ? AppTheme.primaryGreen
+                              ? AppColors.primaryContainer
                               : Colors.grey.shade300,
                           borderRadius: BorderRadius.circular(4),
                         ),
@@ -116,25 +104,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
-                    height: 56,
+                    height: 52,
                     child: ElevatedButton(
                       onPressed: _next,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryGreen,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 0,
-                      ),
                       child: Text(
                         _currentPage == _pages.length - 1
                             ? 'Mulai Sekarang'
                             : 'Lanjut',
                         style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+                            fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -148,28 +126,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-class _OnboardingPage {
+class _OnboardingData {
   final IconData icon;
   final Color iconColor;
   final String title;
   final String subtitle;
   final String description;
-  final bool isLast;
 
-  _OnboardingPage({
+  _OnboardingData({
     required this.icon,
     required this.iconColor,
     required this.title,
     required this.subtitle,
     required this.description,
-    required this.isLast,
   });
 }
 
 class _OnboardingPageWidget extends StatelessWidget {
-  final _OnboardingPage page;
-
-  const _OnboardingPageWidget({required this.page});
+  final _OnboardingData data;
+  const _OnboardingPageWidget({required this.data});
 
   @override
   Widget build(BuildContext context) {
@@ -179,10 +154,8 @@ class _OnboardingPageWidget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const SizedBox(height: 80),
-          // Icon circle
           Container(
-            width: 180,
-            height: 180,
+            width: 180, height: 180,
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
@@ -194,42 +167,25 @@ class _OnboardingPageWidget extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(
-              page.icon,
-              size: 90,
-              color: page.iconColor,
-            ),
+            child: Icon(data.icon, size: 90, color: data.iconColor),
           ),
           const SizedBox(height: 48),
-          Text(
-            page.title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textDark,
-            ),
-          ),
+          Text(data.title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontSize: 24, fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary)),
           const SizedBox(height: 12),
-          Text(
-            page.subtitle,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.primaryGreen,
-            ),
-          ),
+          Text(data.subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w600,
+                  color: AppColors.primaryContainer)),
           const SizedBox(height: 16),
-          Text(
-            page.description,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: AppTheme.textGray,
-              height: 1.6,
-            ),
-          ),
+          Text(data.description,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontSize: 14, color: AppColors.textSecondary, height: 1.6)),
           const SizedBox(height: 160),
         ],
       ),

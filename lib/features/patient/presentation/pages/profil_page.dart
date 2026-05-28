@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../theme.dart';
-import '../data/app_data.dart';
-import 'login_screen.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../data/app_data.dart';
+import '../../../auth/presentation/pages/login_page.dart';
 
-class ProfilScreen extends StatelessWidget {
-  const ProfilScreen({super.key});
+class ProfilPage extends StatelessWidget {
+  const ProfilPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +23,7 @@ class ProfilScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppTheme.primaryGreen,
+        backgroundColor: AppColors.primaryContainer,
         title: const Text('TBeats'),
         leading: IconButton(
           icon: const Icon(Icons.menu_rounded, color: Colors.white),
@@ -36,7 +36,7 @@ class ProfilScreen extends StatelessWidget {
           ),
         ],
       ),
-      backgroundColor: AppTheme.bgGray,
+      backgroundColor: AppColors.background,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -45,7 +45,7 @@ class ProfilScreen extends StatelessWidget {
             // Avatar
             CircleAvatar(
               radius: 48,
-              backgroundColor: AppTheme.primaryGreen,
+              backgroundColor: AppColors.primaryContainer,
               child: Text(
                 initials,
                 style: const TextStyle(
@@ -60,30 +60,30 @@ class ProfilScreen extends StatelessWidget {
               style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark),
+                  color: AppColors.textPrimary),
             ),
             const SizedBox(height: 4),
             Text(
               'ID Pasien: ${patient.patientId}',
               style:
-                  const TextStyle(color: AppTheme.textGray, fontSize: 13),
+                  const TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
             const SizedBox(height: 8),
             Container(
               padding:
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
               decoration: BoxDecoration(
-                color: AppTheme.successGreen.withOpacity(0.12),
+                color: AppColors.success.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.circle, color: AppTheme.successGreen, size: 10),
+                children: [
+                  Icon(Icons.circle, color: AppColors.success, size: 10),
                   SizedBox(width: 6),
                   Text('Pengobatan Aktif',
                       style: TextStyle(
-                          color: AppTheme.successGreen,
+                          color: AppColors.success,
                           fontWeight: FontWeight.w600,
                           fontSize: 13)),
                 ],
@@ -123,14 +123,14 @@ class ProfilScreen extends StatelessWidget {
                           children: [
                             const Text('Durasi',
                                 style: TextStyle(
-                                    color: AppTheme.textGray, fontSize: 12)),
+                                    color: AppColors.textSecondary, fontSize: 12)),
                             const SizedBox(height: 4),
                             Text(
                               '${patient.durationMonths} Bulan',
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 18,
-                                  color: AppTheme.textDark),
+                                  color: AppColors.textPrimary),
                             ),
                           ],
                         ),
@@ -150,19 +150,19 @@ class ProfilScreen extends StatelessWidget {
                           children: [
                             const Text('Fase Saat Ini',
                                 style: TextStyle(
-                                    color: AppTheme.textGray, fontSize: 12)),
+                                    color: AppColors.textSecondary, fontSize: 12)),
                             const SizedBox(height: 4),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: AppTheme.warningOrange.withOpacity(0.15),
+                                color: AppColors.warning.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 patient.phase,
                                 style: const TextStyle(
-                                    color: AppTheme.warningOrange,
+                                    color: AppColors.warning,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14),
                               ),
@@ -206,10 +206,10 @@ class ProfilScreen extends StatelessWidget {
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
-                                    color: AppTheme.textDark)),
+                                    color: AppColors.textPrimary)),
                             const Text('Perawat Pendamping',
                                 style: TextStyle(
-                                    color: AppTheme.textGray, fontSize: 12)),
+                                    color: AppColors.textSecondary, fontSize: 12)),
                           ],
                         ),
                       ),
@@ -218,8 +218,8 @@ class ProfilScreen extends StatelessWidget {
                         child: Container(
                           width: 40,
                           height: 40,
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryGreen,
+                          decoration: const BoxDecoration(
+                            color: AppColors.primaryContainer,
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.phone_rounded,
@@ -245,11 +245,11 @@ class ProfilScreen extends StatelessWidget {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryGreen.withOpacity(0.12),
+                          color: AppColors.primaryContainer.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(Icons.local_hospital_outlined,
-                            color: AppTheme.primaryGreen, size: 24),
+                            color: AppColors.primaryContainer, size: 24),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -260,21 +260,21 @@ class ProfilScreen extends StatelessWidget {
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
-                                    color: AppTheme.textDark)),
+                                    color: AppColors.textPrimary)),
                             Text(patient.clinicAddress,
                                 style: const TextStyle(
-                                    color: AppTheme.textGray, fontSize: 12)),
+                                    color: AppColors.textSecondary, fontSize: 12)),
                             const SizedBox(height: 4),
                             GestureDetector(
                               onTap: () => _showMapInfo(context),
                               child: const Row(
                                 children: [
                                   Icon(Icons.map_outlined,
-                                      color: AppTheme.primaryGreen, size: 14),
+                                      color: AppColors.primaryContainer, size: 14),
                                   SizedBox(width: 4),
                                   Text('Lihat Peta',
                                       style: TextStyle(
-                                          color: AppTheme.primaryGreen,
+                                          color: AppColors.primaryContainer,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600)),
                                 ],
@@ -300,7 +300,7 @@ class ProfilScreen extends StatelessWidget {
                 label: const Text('Keluar',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.errorRed,
+                  backgroundColor: AppColors.danger,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14)),
@@ -323,7 +323,7 @@ class ProfilScreen extends StatelessWidget {
             style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.textDark)),
+                color: AppColors.textPrimary)),
         const SizedBox(height: 12),
         Container(
           width: double.infinity,
@@ -357,19 +357,19 @@ class ProfilScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(icon, color: AppTheme.primaryGreen, size: 22),
+          Icon(icon, color: AppColors.primaryContainer, size: 22),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label,
                   style: const TextStyle(
-                      color: AppTheme.textGray, fontSize: 11)),
+                      color: AppColors.textSecondary, fontSize: 11)),
               Text(value,
                   style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
-                      color: AppTheme.textDark)),
+                      color: AppColors.textPrimary)),
             ],
           ),
         ],
@@ -388,12 +388,12 @@ class ProfilScreen extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Batal',
-                style: TextStyle(color: AppTheme.textGray)),
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryGreen,
+              backgroundColor: AppColors.primaryContainer,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),
@@ -416,7 +416,7 @@ class ProfilScreen extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Tutup',
-                style: TextStyle(color: AppTheme.primaryGreen)),
+                style: TextStyle(color: AppColors.primaryContainer)),
           ),
         ],
       ),
@@ -434,17 +434,17 @@ class ProfilScreen extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Batal',
-                style: TextStyle(color: AppTheme.textGray)),
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                MaterialPageRoute(builder: (_) => const LoginPage()),
                 (_) => false,
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.errorRed,
+              backgroundColor: AppColors.danger,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),

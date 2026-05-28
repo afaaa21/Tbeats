@@ -16,9 +16,10 @@ class _NurseDashboardScreenState extends State<NurseDashboardScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = const [
-    _DashboardContent(),
-    _PatientsContent(),
-    NurseProfileScreen(),
+    const _DashboardContent(),
+    const _PatientsContent(),
+    const _ReportContent(),
+    const NurseProfileScreen(),
   ];
 
   @override
@@ -54,12 +55,17 @@ class _NurseDashboardScreenState extends State<NurseDashboardScreen> {
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard, color: AppColors.onPrimaryContainer),
-            label: 'Dashboard',
+            label: 'Beranda',
           ),
           NavigationDestination(
             icon: Icon(Icons.group_outlined),
             selectedIcon: Icon(Icons.group, color: AppColors.onPrimaryContainer),
             label: 'Pasien',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.leaderboard_outlined),
+            selectedIcon: Icon(Icons.leaderboard, color: Colors.white),
+            label: 'Laporan',               // ← tab baru
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
@@ -80,8 +86,8 @@ class _DashboardContent extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('TBeats'),
-        leading: Padding(
-          padding: const EdgeInsets.all(10),
+        leading: const Padding(
+          padding: EdgeInsets.all(10),
           child: CircleAvatar(
             radius: 16,
             backgroundImage: NetworkImage(
@@ -161,12 +167,12 @@ class _DashboardContent extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.errorContainer,
               borderRadius: BorderRadius.circular(8),
-              border: Border(left: BorderSide(color: AppColors.danger, width: 4)),
+              border: const Border(left: BorderSide(color: AppColors.danger, width: 4)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.warning_outlined, color: AppColors.danger, size: 20),
+                const Icon(Icons.warning_outlined, color: AppColors.danger, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: RichText(
@@ -246,10 +252,10 @@ class _DashboardContent extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Semua Pasien
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Semua Pasien',
                 style: TextStyle(
                   fontSize: 18,
@@ -261,7 +267,7 @@ class _DashboardContent extends StatelessWidget {
               Row(
                 children: [
                   Icon(Icons.search, color: AppColors.textSecondary, size: 22),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Icon(Icons.filter_list, color: AppColors.textSecondary, size: 22),
                 ],
               ),
@@ -318,6 +324,15 @@ class _PatientsContent extends StatelessWidget {
   }
 }
 
+class _ReportContent extends StatelessWidget {
+  const _ReportContent();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ReportScreen();
+  }
+}
+
 enum PatientStatus { taken, late, notReported }
 
 class _CriticalPatientCard extends StatelessWidget {
@@ -341,7 +356,7 @@ class _CriticalPatientCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border(left: BorderSide(color: AppColors.danger, width: 4)),
+        border: const Border(left: BorderSide(color: AppColors.danger, width: 4)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),

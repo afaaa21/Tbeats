@@ -36,10 +36,10 @@ class NurseProfileScreen extends StatelessWidget {
             children: [
               Stack(
                 children: [
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 48,
                     backgroundColor: AppColors.surfaceContainerHigh,
-                    child: const Text(
+                    child: Text(
                       'DL',
                       style: TextStyle(
                         fontSize: 32,
@@ -85,11 +85,11 @@ class NurseProfileScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border(left: BorderSide(color: AppColors.primary, width: 4)),
+                    border: const Border(left: BorderSide(color: AppColors.primary, width: 4)),
                     boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12)],
                   ),
-                  child: Column(
-                    children: const [
+                  child: const Column(
+                    children: [
                       Text('5', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.primaryContainer, fontFamily: 'PlusJakartaSans')),
                       Text('Pasien Aktif', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontFamily: 'PlusJakartaSans')),
                     ],
@@ -125,20 +125,20 @@ class NurseProfileScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12)],
             ),
-            child: Column(
+            child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                  child: const Text('Informasi Personal', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontFamily: 'PlusJakartaSans')),
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 12),
+                  child: Text('Informasi Personal', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontFamily: 'PlusJakartaSans')),
                 ),
-                const Divider(height: 1, color: AppColors.surfaceContainer),
+                Divider(height: 1, color: AppColors.surfaceContainer),
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     children: [
                       _InfoRow(icon: Icons.call_outlined, iconColor: AppColors.primaryContainer, label: 'Nomor Handphone', value: '+62 812 3456 7890'),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       _InfoRow(icon: Icons.calendar_today_outlined, iconColor: AppColors.primaryContainer, label: 'Bergabung Sejak', value: '12 Januari 2023'),
                     ],
                   ),
@@ -149,18 +149,18 @@ class NurseProfileScreen extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Monitor Pasien
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
+            children: [
               Text('Monitor Pasien', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontFamily: 'PlusJakartaSans')),
               Text('Lihat Semua', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary, fontFamily: 'PlusJakartaSans')),
             ],
           ),
           const SizedBox(height: 12),
-          Wrap(
+          const Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: const [
+            children: [
               _PatientChip(name: 'Budi S.', isAlert: false),
               _PatientChip(name: 'Siti Aminah', isAlert: false),
               _PatientChip(name: 'Andi Wijaya', isAlert: true),

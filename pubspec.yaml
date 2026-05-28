@@ -16,6 +16,7 @@ dependencies:
   intl: ^0.18.1
   image_picker: ^1.0.4
   shared_preferences: ^2.2.2
+  google_fonts: ^6.2.1 
 
 dev_dependencies:
   flutter_test:
@@ -24,14 +25,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  fonts:
-    - family: PlusJakartaSans
-      fonts:
-        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
-          weight: 700

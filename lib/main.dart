@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'theme.dart';
-import 'screens/onboarding_screen.dart';
+import 'core/theme/app_theme.dart';
+import 'features/onboarding/presentation/pages/onboarding_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,7 +24,7 @@ class TBeatsApp extends StatelessWidget {
       title: 'TBeats',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
-      home: const OnboardingScreen(),
+      home: const OnboardingPage(),
     );
   }
 }

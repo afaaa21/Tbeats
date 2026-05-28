@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import '../theme.dart';
-import '../data/app_data.dart';
-import '../models/models.dart';
-import '../widgets/medication_icon.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../data/app_data.dart';
+import '../../../../models/models.dart';
+import '../../../../widgets/medication_icon.dart';
 
-class RiwayatScreen extends StatefulWidget {
-  const RiwayatScreen({super.key});
-
+class RiwayatPage extends StatefulWidget {
+  const RiwayatPage({super.key});
   @override
-  State<RiwayatScreen> createState() => _RiwayatScreenState();
+  State<RiwayatPage> createState() => _RiwayatPageState();
 }
 
-class _RiwayatScreenState extends State<RiwayatScreen> {
+class _RiwayatPageState extends State<RiwayatPage> {
   int _selectedMonthIndex = 5; // Jun = index 5
 
   final List<String> _months = [
@@ -25,7 +24,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppTheme.primaryGreen,
+        backgroundColor: AppColors.primaryContainer,
         title: const Text('TBeats'),
         leading: IconButton(
           icon: const Icon(Icons.menu_rounded, color: Colors.white),
@@ -38,7 +37,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
           ),
         ],
       ),
-      backgroundColor: AppTheme.bgGray,
+      backgroundColor: AppColors.background,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -49,11 +48,11 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
               style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark),
+                  color: AppColors.textPrimary),
             ),
             const SizedBox(height: 4),
             const Text('Pantau tingkat kepatuhan Anda.',
-                style: TextStyle(color: AppTheme.textGray, fontSize: 14)),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
             const SizedBox(height: 16),
 
             // Month selector
@@ -73,19 +72,19 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
                           horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppTheme.primaryGreen
+                            ? AppColors.primaryContainer
                             : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: isSelected
-                              ? AppTheme.primaryGreen
+                              ? AppColors.primaryContainer
                               : Colors.grey.shade200,
                         ),
                       ),
                       child: Text(
                         _months[i],
                         style: TextStyle(
-                          color: isSelected ? Colors.white : AppTheme.textGray,
+                          color: isSelected ? Colors.white : AppColors.textSecondary,
                           fontWeight: isSelected
                               ? FontWeight.bold
                               : FontWeight.normal,
@@ -113,7 +112,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
               style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark),
+                  color: AppColors.textPrimary),
             ),
             const SizedBox(height: 12),
             ...AppData.historyList.map((h) => _buildHistoryItem(h)),
@@ -153,7 +152,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
                     value: 0.85,
                     backgroundColor: Colors.grey.shade200,
                     valueColor: const AlwaysStoppedAnimation<Color>(
-                        AppTheme.successGreen),
+                        AppColors.success),
                     strokeWidth: 8,
                   ),
                 ),
@@ -163,7 +162,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryGreen,
+                    color: AppColors.primaryContainer,
                   ),
                 ),
               ],
@@ -173,11 +172,11 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildLegendRow(AppTheme.successGreen, '24 Tepat Waktu'),
+              _buildLegendRow(AppColors.success, '24 Tepat Waktu'),
               const SizedBox(height: 8),
-              _buildLegendRow(AppTheme.warningOrange, '3 Terlambat'),
+              _buildLegendRow(AppColors.warning, '3 Terlambat'),
               const SizedBox(height: 8),
-              _buildLegendRow(AppTheme.errorRed, '1 Terlewat'),
+              _buildLegendRow(AppColors.danger, '1 Terlewat'),
             ],
           ),
         ],
@@ -195,7 +194,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
         ),
         const SizedBox(width: 8),
         Text(label,
-            style: const TextStyle(fontSize: 13, color: AppTheme.textDark)),
+            style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
       ],
     );
   }
@@ -216,19 +215,19 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Checklist Obat Hari Ini',
                 style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
-                    color: AppTheme.textDark),
+                    color: AppColors.textPrimary),
               ),
-              const Text('Sabtu, 17 Jun',
+              Text('Sabtu, 17 Jun',
                   style:
-                      TextStyle(color: AppTheme.textGray, fontSize: 12)),
+                      TextStyle(color: AppColors.textSecondary, fontSize: 12)),
             ],
           ),
           const SizedBox(height: 16),
@@ -245,7 +244,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.bgGray,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -255,7 +254,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
               style: const TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
-                  color: AppTheme.textDark)),
+                  color: AppColors.textPrimary)),
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -264,7 +263,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
                 children: [
                   Text(_dayLabels[i],
                       style: const TextStyle(
-                          fontSize: 10, color: AppTheme.textGray)),
+                          fontSize: 10, color: AppColors.textSecondary)),
                   const SizedBox(height: 4),
                   _buildDayDot(statuses[i]),
                 ],
@@ -294,7 +293,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
           width: 28,
           height: 28,
           decoration: const BoxDecoration(
-              color: AppTheme.successGreen, shape: BoxShape.circle),
+              color: AppColors.success, shape: BoxShape.circle),
           child:
               const Icon(Icons.check_rounded, color: Colors.white, size: 16),
         );
@@ -303,7 +302,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
           width: 28,
           height: 28,
           decoration: const BoxDecoration(
-              color: AppTheme.warningOrange, shape: BoxShape.circle),
+              color: AppColors.warning, shape: BoxShape.circle),
           child: const Icon(Icons.remove_rounded,
               color: Colors.white, size: 16),
         );
@@ -312,7 +311,7 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
           width: 28,
           height: 28,
           decoration: const BoxDecoration(
-              color: AppTheme.errorRed, shape: BoxShape.circle),
+              color: AppColors.danger, shape: BoxShape.circle),
           child:
               const Icon(Icons.close_rounded, color: Colors.white, size: 16),
         );
@@ -338,22 +337,22 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
 
     switch (h.status) {
       case MedicationStatus.sudahDiminum:
-        statusColor = AppTheme.successGreen;
+        statusColor = AppColors.success;
         statusLabel = 'SUDAH DIMINUM';
-        statusBg = AppTheme.lightGreenBg;
+        statusBg = AppColors.successLight;
         break;
       case MedicationStatus.terlambat:
-        statusColor = AppTheme.warningOrange;
+        statusColor = AppColors.warning;
         statusLabel = 'TERLAMBAT';
-        statusBg = AppTheme.lightOrange;
+        statusBg = AppColors.warningLight;
         break;
       case MedicationStatus.terlewat:
-        statusColor = AppTheme.errorRed;
+        statusColor = AppColors.danger;
         statusLabel = 'TERLEWAT';
-        statusBg = AppTheme.lightRed;
+        statusBg = AppColors.dangerLight;
         break;
       default:
-        statusColor = AppTheme.textGray;
+        statusColor = AppColors.textSecondary;
         statusLabel = '-';
         statusBg = Colors.grey.shade100;
     }
@@ -390,17 +389,17 @@ class _RiwayatScreenState extends State<RiwayatScreen> {
               children: [
                 Text(dateStr,
                     style: const TextStyle(
-                        color: AppTheme.textGray, fontSize: 11)),
+                        color: AppColors.textSecondary, fontSize: 11)),
                 const SizedBox(height: 4),
                 Text('${h.medicationName} ${h.dose}',
                     style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
-                        color: AppTheme.textDark)),
+                        color: AppColors.textPrimary)),
                 const SizedBox(height: 2),
                 Text(reportStr,
                     style: const TextStyle(
-                        color: AppTheme.textGray, fontSize: 12)),
+                        color: AppColors.textSecondary, fontSize: 12)),
               ],
             ),
           ),

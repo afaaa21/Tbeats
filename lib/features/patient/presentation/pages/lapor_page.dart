@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
-import '../theme.dart';
-import '../models/models.dart';
-import '../data/app_data.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../data/app_data.dart';
+import '../../../../models/models.dart';
 
-class LaporScreen extends StatefulWidget {
+class LaporPage extends StatefulWidget {
   final Medication medication;
-
-  const LaporScreen({super.key, required this.medication});
-
+  const LaporPage({super.key, required this.medication});
   @override
-  State<LaporScreen> createState() => _LaporScreenState();
+  State<LaporPage> createState() => _LaporPageState();
 }
 
-class _LaporScreenState extends State<LaporScreen> {
+class _LaporPageState extends State<LaporPage> {
   bool _photoTaken = false;
   bool _submitting = false;
   final _notesCtrl = TextEditingController();
@@ -29,7 +27,7 @@ class _LaporScreenState extends State<LaporScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Foto berhasil diambil'),
-        backgroundColor: AppTheme.successGreen,
+        backgroundColor: AppColors.success,
         duration: Duration(seconds: 1),
       ),
     );
@@ -44,7 +42,7 @@ class _LaporScreenState extends State<LaporScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Harap ambil foto terlebih dahulu'),
-          backgroundColor: AppTheme.errorRed,
+          backgroundColor: AppColors.danger,
         ),
       );
       return;
@@ -77,7 +75,7 @@ class _LaporScreenState extends State<LaporScreen> {
               width: 72,
               height: 72,
               decoration: const BoxDecoration(
-                  color: AppTheme.successGreen, shape: BoxShape.circle),
+                  color: AppColors.success, shape: BoxShape.circle),
               child: const Icon(Icons.check_rounded,
                   color: Colors.white, size: 40),
             ),
@@ -87,13 +85,13 @@ class _LaporScreenState extends State<LaporScreen> {
               style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark),
+                  color: AppColors.textPrimary),
             ),
             const SizedBox(height: 8),
             const Text(
               'Data Anda telah dikirim ke perawat pendamping.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppTheme.textGray, fontSize: 14),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
             ),
           ],
         ),
@@ -106,7 +104,7 @@ class _LaporScreenState extends State<LaporScreen> {
                 Navigator.pop(context); // back to previous
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryGreen,
+                backgroundColor: AppColors.primaryContainer,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
@@ -127,10 +125,10 @@ class _LaporScreenState extends State<LaporScreen> {
     final minute = med.time.minute.toString().padLeft(2, '0');
 
     return Scaffold(
-      backgroundColor: AppTheme.bgGray,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        foregroundColor: AppTheme.textDark,
+        foregroundColor: AppColors.textPrimary,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
@@ -139,7 +137,7 @@ class _LaporScreenState extends State<LaporScreen> {
         title: const Text(
           'Lapor Minum Obat',
           style: TextStyle(
-              fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.textDark),
+              fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.textPrimary),
         ),
       ),
       body: SingleChildScrollView(
@@ -166,7 +164,7 @@ class _LaporScreenState extends State<LaporScreen> {
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryGreen,
+                      color: AppColors.primaryContainer,
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: const Icon(Icons.medication_rounded,
@@ -181,12 +179,12 @@ class _LaporScreenState extends State<LaporScreen> {
                         style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
-                            color: AppTheme.textDark),
+                            color: AppColors.textPrimary),
                       ),
                       Text(
                         '${med.dose} • $hour:$minute WIB',
                         style: const TextStyle(
-                            color: AppTheme.textGray, fontSize: 14),
+                            color: AppColors.textSecondary, fontSize: 14),
                       ),
                     ],
                   ),
@@ -196,18 +194,18 @@ class _LaporScreenState extends State<LaporScreen> {
             const SizedBox(height: 20),
 
             // Photo section
-            Row(
+            const Row(
               children: [
-                const Text(
+                Text(
                   'Bukti Foto',
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: AppTheme.textDark),
+                      color: AppColors.textPrimary),
                 ),
-                const Spacer(),
-                const Text('*Wajib',
-                    style: TextStyle(color: AppTheme.errorRed, fontSize: 14)),
+                Spacer(),
+                Text('*Wajib',
+                    style: TextStyle(color: AppColors.danger, fontSize: 14)),
               ],
             ),
             const SizedBox(height: 12),
@@ -220,13 +218,13 @@ class _LaporScreenState extends State<LaporScreen> {
                 height: 220,
                 decoration: BoxDecoration(
                   color: _photoTaken
-                      ? AppTheme.successGreen.withOpacity(0.08)
-                      : AppTheme.primaryGreen.withOpacity(0.05),
+                      ? AppColors.success.withOpacity(0.08)
+                      : AppColors.primaryContainer.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: _photoTaken
-                        ? AppTheme.successGreen
-                        : AppTheme.primaryGreen,
+                        ? AppColors.success
+                        : AppColors.primaryContainer,
                     width: 2,
                     style: BorderStyle.solid,
                   ),
@@ -239,7 +237,7 @@ class _LaporScreenState extends State<LaporScreen> {
                             width: 64,
                             height: 64,
                             decoration: const BoxDecoration(
-                                color: AppTheme.successGreen,
+                                color: AppColors.success,
                                 shape: BoxShape.circle),
                             child: const Icon(Icons.check_rounded,
                                 color: Colors.white, size: 36),
@@ -247,13 +245,13 @@ class _LaporScreenState extends State<LaporScreen> {
                           const SizedBox(height: 12),
                           const Text('Foto Berhasil Diambil',
                               style: TextStyle(
-                                  color: AppTheme.successGreen,
+                                  color: AppColors.success,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16)),
                           const SizedBox(height: 4),
                           const Text('Tap untuk ambil ulang',
                               style: TextStyle(
-                                  color: AppTheme.textGray, fontSize: 13)),
+                                  color: AppColors.textSecondary, fontSize: 13)),
                         ],
                       )
                     : Column(
@@ -280,7 +278,7 @@ class _LaporScreenState extends State<LaporScreen> {
                                     width: 52,
                                     height: 52,
                                     decoration: const BoxDecoration(
-                                      color: AppTheme.primaryGreen,
+                                      color: AppColors.primaryContainer,
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(Icons.camera_alt_rounded,
@@ -303,7 +301,7 @@ class _LaporScreenState extends State<LaporScreen> {
                           const SizedBox(height: 8),
                           const Text('Ambil Foto',
                               style: TextStyle(
-                                  color: AppTheme.primaryGreen,
+                                  color: AppColors.primaryContainer,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16)),
                           const SizedBox(height: 4),
@@ -311,7 +309,7 @@ class _LaporScreenState extends State<LaporScreen> {
                             'Pastikan wajah dan obat\nterlihat jelas dalam satu bingkai',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                                color: AppTheme.textGray, fontSize: 13),
+                                color: AppColors.textSecondary, fontSize: 13),
                           ),
                         ],
                       ),
@@ -325,7 +323,7 @@ class _LaporScreenState extends State<LaporScreen> {
               style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
-                  color: AppTheme.textDark),
+                  color: AppColors.textPrimary),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -337,7 +335,7 @@ class _LaporScreenState extends State<LaporScreen> {
                 prefixIcon: const Padding(
                   padding: EdgeInsets.only(bottom: 40),
                   child: Icon(Icons.edit_note_rounded,
-                      color: AppTheme.textGray),
+                      color: AppColors.textSecondary),
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -350,7 +348,7 @@ class _LaporScreenState extends State<LaporScreen> {
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                   borderSide:
-                      const BorderSide(color: AppTheme.primaryGreen),
+                      const BorderSide(color: AppColors.primaryContainer),
                 ),
                 filled: true,
                 fillColor: Colors.white,
@@ -365,7 +363,7 @@ class _LaporScreenState extends State<LaporScreen> {
               child: ElevatedButton(
                 onPressed: _submitting ? null : _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryGreen,
+                  backgroundColor: AppColors.primaryContainer,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
@@ -417,7 +415,7 @@ class _CornerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppTheme.primaryGreen
+      ..color = AppColors.primaryContainer
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -429,7 +427,7 @@ class _CornerPainter extends CustomPainter {
       canvas.drawLine(Offset(0, h), const Offset(0, 0), paint);
       canvas.drawLine(const Offset(0, 0), Offset(w, 0), paint);
     } else if (top && !left) {
-      canvas.drawLine(Offset(0, 0), Offset(w, 0), paint);
+      canvas.drawLine(const Offset(0, 0), Offset(w, 0), paint);
       canvas.drawLine(Offset(w, 0), Offset(w, h), paint);
     } else if (!top && left) {
       canvas.drawLine(const Offset(0, 0), Offset(0, h), paint);
