@@ -99,7 +99,7 @@ class _ReportScreenState extends State<ReportScreen> {
                 Row(
                   children: [
                     // Donut progress
-                    SizedBox(
+                    const SizedBox(
                       width: 88,
                       height: 88,
                       child: Stack(
@@ -116,7 +116,7 @@ class _ReportScreenState extends State<ReportScreen> {
                               strokeCap: StrokeCap.round,
                             ),
                           ),
-                          const Text(
+                          Text(
                             '82%',
                             style: TextStyle(
                               fontSize: 18,
@@ -155,7 +155,7 @@ class _ReportScreenState extends State<ReportScreen> {
                           // Progress bar tipis
                           ClipRRect(
                             borderRadius: BorderRadius.circular(99),
-                            child: LinearProgressIndicator(
+                            child: const LinearProgressIndicator(
                               value: 0.82,
                               backgroundColor: AppColors.surfaceContainerHigh,
                               color: AppColors.success,
@@ -195,7 +195,7 @@ class _ReportScreenState extends State<ReportScreen> {
           const SizedBox(height: 12),
 
           // ── Wawasan Cepat ──────────────────────────────────
-          Row(
+          const Row(
             children: [
               Expanded(
                 child: _QuickInsightCard(
@@ -206,7 +206,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   label: 'Dosis Terlewat',
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: _QuickInsightCard(
                   icon: Icons.warning_rounded,
@@ -346,10 +346,10 @@ class _ReportScreenState extends State<ReportScreen> {
 
           // ── Ringkasan Bulanan ──────────────────────────────
           _buildCard(
-            child: Column(
+            child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Ringkasan Bulanan',
                   style: TextStyle(
                     fontSize: 16,
@@ -358,34 +358,34 @@ class _ReportScreenState extends State<ReportScreen> {
                     fontFamily: 'PlusJakartaSans',
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _SummaryRow(
                   icon: Icons.group_outlined,
-                  iconBg: const Color(0x1A005235),
+                  iconBg: Color(0x1A005235),
                   iconColor: AppColors.primary,
                   label: 'Total Pasien',
                   value: '124',
                 ),
-                const Divider(height: 20, color: AppColors.surfaceContainerHigh),
+                Divider(height: 20, color: AppColors.surfaceContainerHigh),
                 _SummaryRow(
                   icon: Icons.task_alt_rounded,
-                  iconBg: const Color(0x1A27AE60),
+                  iconBg: Color(0x1A27AE60),
                   iconColor: AppColors.success,
                   label: 'Selesai Pengobatan',
                   value: '12',
                 ),
-                const Divider(height: 20, color: AppColors.surfaceContainerHigh),
+                Divider(height: 20, color: AppColors.surfaceContainerHigh),
                 _SummaryRow(
                   icon: Icons.person_add_outlined,
-                  iconBg: const Color(0x1A006492),
+                  iconBg: Color(0x1A006492),
                   iconColor: Color(0xFF006492),
                   label: 'Pasien Baru',
                   value: '5',
                 ),
-                const Divider(height: 20, color: AppColors.surfaceContainerHigh),
+                Divider(height: 20, color: AppColors.surfaceContainerHigh),
                 _SummaryRow(
                   icon: Icons.medication_outlined,
-                  iconBg: const Color(0x1AF2994A),
+                  iconBg: Color(0x1AF2994A),
                   iconColor: AppColors.warning,
                   label: 'Total Dosis Terlewat',
                   value: '45',
@@ -432,19 +432,19 @@ class _ReportScreenState extends State<ReportScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                _AttentionPatientRow(
+                const _AttentionPatientRow(
                     initials: 'BS',
                     name: 'Budi Santoso',
                     missedDays: 3,
                     compliance: 42),
                 const SizedBox(height: 10),
-                _AttentionPatientRow(
+                const _AttentionPatientRow(
                     initials: 'AH',
                     name: 'Ani Haryati',
                     missedDays: 2,
                     compliance: 55),
                 const SizedBox(height: 10),
-                _AttentionPatientRow(
+                const _AttentionPatientRow(
                     initials: 'DK',
                     name: 'Dedi Kurniawan',
                     missedDays: 2,

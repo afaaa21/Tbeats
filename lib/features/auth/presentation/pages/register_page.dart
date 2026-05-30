@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import 'login_page.dart';
+import '../../../../service/api_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -10,15 +11,16 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  final _nameCtrl    = TextEditingController();
-  final _emailCtrl   = TextEditingController();
-  final _phoneCtrl   = TextEditingController();
-  final _passCtrl    = TextEditingController();
+  final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
+  final ApiService _apiService = ApiService();
 
-  bool _obscurePass    = true;
+  bool _obscurePass = true;
   bool _obscureConfirm = true;
-  bool _loading        = false;
+  bool _loading = false;
   String? _error;
 
   @override
@@ -32,7 +34,6 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void _submit() async {
-    // Validasi sederhana
     if (_nameCtrl.text.trim().isEmpty ||
         _emailCtrl.text.trim().isEmpty ||
         _phoneCtrl.text.trim().isEmpty ||
@@ -45,383 +46,286 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() => _error = 'Password dan konfirmasi tidak cocok.');
       return;
     }
-    if (_passCtrl.text.length < 8) {
-      setState(() => _error = 'Password minimal 8 karakter.');
+    if (_passCtrl.text.length < 6) {
+      setState(() => _error = 'Password minimal 6 karakter.');
       return;
     }
 
-    setState(() { _loading = true; _error = null; });
-    await Future.delayed(const Duration(milliseconds: 800));
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
-    if (!mounted) return;
-    setState(() => _loading = false);
+    try {
+      // PANGGIL SUPABASE SDK DARI API SERVICE
+      await _apiService.registerPerawat(
+        _nameCtrl.text.trim(),
+        _emailCtrl.text.trim(),
+        _passCtrl.text,
+      );
 
-    // Tampilkan sukses lalu kembali ke login
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72, height: 72,
-              decoration: const BoxDecoration(
-                  color: AppColors.success, shape: BoxShape.circle),
-              child: const Icon(Icons.check_rounded,
-                  color: Colors.white, size: 40),
-            ),
-            const SizedBox(height: 16),
-            const Text('Registrasi Berhasil!',
+      if (!mounted) return;
+      setState(() => _loading = false);
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: const BoxDecoration(
+                    color: AppColors.success, shape: BoxShape.circle),
+                child: const Icon(Icons.check_rounded,
+                    color: Colors.white, size: 40),
+              ),
+              const SizedBox(height: 16),
+              const Text('Registrasi Berhasil!',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary)),
+              const SizedBox(height: 8),
+              const Text(
+                'Akun perawat Anda telah dibuat. Silakan masuk untuk melanjutkan.',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary)),
-            const SizedBox(height: 8),
-            const Text(
-              'Akun perawat Anda telah dibuat. Silakan masuk untuk melanjutkan.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 14, color: AppColors.textSecondary, height: 1.4),
+                    fontSize: 14, color: AppColors.textSecondary, height: 1.4),
+              ),
+            ],
+          ),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const LoginPage()),
+                    (route) => false,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryContainer,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Selesai',
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white)),
+              ),
             ),
           ],
         ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                  (_) => false,
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryContainer,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-              child: const Text('Masuk Sekarang'),
-            ),
-          ),
-        ],
-      ),
-    );
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primaryContainer,
-      body: Column(
-        children: [
-          // ── Hero section ──────────────────────────────
-          SizedBox(
-            height: 260,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Dekoratif blob
-                Positioned(
-                  top: -20, right: -20,
-                  child: Container(
-                    width: 120, height: 120,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.07),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 0,
-                  left: MediaQuery.of(context).size.width / 4,
-                  child: Container(
-                    width: 180, height: 180,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.25),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-                // Konten brand
-                SafeArea(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Icon lingkaran putih
-                      Container(
-                        width: 72, height: 72,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0x22000000),
-                              blurRadius: 16,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.monitor_heart_outlined,
-                          color: AppColors.primaryContainer,
-                          size: 34,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text('TBeats',
-                          style: TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          )),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Pendamping Setia Perjalanan Pengobatan TBC',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.white70),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded,
+              color: AppColors.textPrimary),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          'Daftar Akun Baru',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
           ),
-
-          // ── Card form bawah ───────────────────────────
-          Expanded(
-            child: Container(
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x22000000),
-                    blurRadius: 20,
-                    offset: Offset(0, -4),
-                  ),
-                ],
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Bergabung bersama TBeats',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+                letterSpacing: -0.5,
               ),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Isi form di bawah ini untuk mendaftarkan akun perawat baru.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            ),
+            const SizedBox(height: 32),
+
+            // Nama Lengkap
+            _buildTextField(
+              controller: _nameCtrl,
+              label: 'Nama Lengkap',
+              icon: Icons.person_outline_rounded,
+            ),
+            const SizedBox(height: 16),
+
+            // Email
+            _buildTextField(
+              controller: _emailCtrl,
+              label: 'Email',
+              icon: Icons.email_outlined,
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 16),
+
+            // Nomor Telepon
+            _buildTextField(
+              controller: _phoneCtrl,
+              label: 'Nomor Telepon',
+              icon: Icons.phone_outlined,
+              keyboardType: TextInputType.phone,
+            ),
+            const SizedBox(height: 16),
+
+            // Password
+            _buildTextField(
+              controller: _passCtrl,
+              label: 'Kata Sandi',
+              icon: Icons.lock_outline_rounded,
+              obscureText: _obscurePass,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePass
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: AppColors.outline,
+                ),
+                onPressed: () => setState(() => _obscurePass = !_obscurePass),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Konfirmasi Password
+            _buildTextField(
+              controller: _confirmCtrl,
+              label: 'Konfirmasi Kata Sandi',
+              icon: Icons.lock_outline_rounded,
+              obscureText: _obscureConfirm,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureConfirm
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: AppColors.outline,
+                ),
+                onPressed: () =>
+                    setState(() => _obscureConfirm = !_obscureConfirm),
+              ),
+            ),
+
+            if (_error != null) ...[
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.dangerLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
                   children: [
-                    const Text('Daftar sebagai Perawat',
-                        style: TextStyle(
-                            fontSize: 22, fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary)),
-                    const SizedBox(height: 4),
-                    const Text('Buat akun untuk mulai memantau pasien',
-                        style: TextStyle(
-                            fontSize: 14, color: AppColors.textSecondary)),
-                    const SizedBox(height: 24),
-
-                    // Form fields
-                    _buildField(
-                      controller: _nameCtrl,
-                      hint: 'Nama Lengkap',
-                      icon: Icons.person_outlined,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildField(
-                      controller: _emailCtrl,
-                      hint: 'Email',
-                      icon: Icons.mail_outlined,
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildField(
-                      controller: _phoneCtrl,
-                      hint: 'Nomor HP',
-                      icon: Icons.phone_outlined,
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildPasswordField(
-                      controller: _passCtrl,
-                      hint: 'Password',
-                      obscure: _obscurePass,
-                      onToggle: () =>
-                          setState(() => _obscurePass = !_obscurePass),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildPasswordField(
-                      controller: _confirmCtrl,
-                      hint: 'Konfirmasi Password',
-                      obscure: _obscureConfirm,
-                      onToggle: () =>
-                          setState(() => _obscureConfirm = !_obscureConfirm),
-                    ),
-
-                    // Error message
-                    if (_error != null) ...[
-                      const SizedBox(height: 14),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.dangerLight,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(children: [
-                          const Icon(Icons.error_outline,
-                              color: AppColors.danger, size: 18),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(_error!,
-                                style: const TextStyle(
-                                    color: AppColors.danger, fontSize: 13)),
-                          ),
-                        ]),
-                      ),
-                    ],
-
-                    const SizedBox(height: 24),
-
-                    // Tombol daftar
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _loading ? null : _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryContainer,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
-                          elevation: 0,
-                        ),
-                        child: _loading
-                            ? const SizedBox(
-                                width: 22, height: 22,
-                                child: CircularProgressIndicator(
-                                    color: Colors.white, strokeWidth: 2.5))
-                            : const Text('Daftar Sekarang',
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white)),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Link ke login
-                    Center(
-                      child: GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: RichText(
-                          text: const TextSpan(
-                            style: TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 14,
-                                color: AppColors.textSecondary),
-                            children: [
-                              TextSpan(text: 'Sudah punya akun?  '),
-                              TextSpan(
-                                text: 'Masuk',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.primaryContainer),
-                              ),
-                            ],
-                          ),
-                        ),
+                    const Icon(Icons.error_outline,
+                        color: AppColors.danger, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(
+                            color: AppColors.danger, fontSize: 13, height: 1.4),
                       ),
                     ),
                   ],
                 ),
               ),
+            ],
+
+            const SizedBox(height: 32),
+
+            // Tombol Daftar
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _loading ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryContainer,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: _loading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2))
+                    : const Text('Daftar Sekarang',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w700)),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildField({
+  Widget _buildTextField({
     required TextEditingController controller,
-    required String hint,
+    required String label,
     required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
+    bool obscureText = false,
+    TextInputType? keyboardType,
+    Widget? suffixIcon,
   }) {
-    return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: 16),
-          Icon(icon, color: AppColors.outline, size: 22),
-          const SizedBox(width: 12),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              keyboardType: keyboardType,
-              style: const TextStyle(
-                  fontSize: 16, color: AppColors.textPrimary),
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: const TextStyle(
-                    fontSize: 16, color: AppColors.textSecondary),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPasswordField({
-    required TextEditingController controller,
-    required String hint,
-    required bool obscure,
-    required VoidCallback onToggle,
-  }) {
-    return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: 16),
-          const Icon(Icons.lock_outline, color: AppColors.outline, size: 22),
-          const SizedBox(width: 12),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              obscureText: obscure,
-              style: const TextStyle(
-                  fontSize: 16, color: AppColors.textPrimary),
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: const TextStyle(
-                    fontSize: 16, color: AppColors.textSecondary),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-          IconButton(
-            onPressed: onToggle,
-            icon: Icon(
-              obscure
-                  ? Icons.visibility_outlined
-                  : Icons.visibility_off_outlined,
-              color: AppColors.outline,
-              size: 22,
-            ),
-          ),
-        ],
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      style: const TextStyle(fontSize: 15),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: AppColors.outline),
+        prefixIcon: Icon(icon, color: AppColors.outline),
+        suffixIcon: suffixIcon,
+        filled: true,
+        fillColor: AppColors.background,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide:
+              const BorderSide(color: AppColors.primaryContainer, width: 1.5),
+        ),
       ),
     );
   }

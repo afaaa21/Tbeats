@@ -9,11 +9,11 @@ class NurseProfileScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('TBeats'),
-        leading: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+        leading: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12),
           child: CircleAvatar(
             backgroundColor: AppColors.primaryContainer,
-            child: const Text(
+            child: Text(
               'DL',
               style: TextStyle(
                 color: AppColors.onPrimaryContainer,
@@ -103,11 +103,11 @@ class NurseProfileScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border(left: BorderSide(color: AppColors.secondaryContainer, width: 4)),
+                    border: const Border(left: BorderSide(color: AppColors.secondaryContainer, width: 4)),
                     boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12)],
                   ),
-                  child: Column(
-                    children: const [
+                  child: const Column(
+                    children: [
                       Text('42', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.secondary, fontFamily: 'PlusJakartaSans')),
                       Text('Verifikasi Bulan Ini', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontFamily: 'PlusJakartaSans'), textAlign: TextAlign.center),
                     ],

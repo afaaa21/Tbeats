@@ -16,10 +16,10 @@ class _NurseDashboardScreenState extends State<NurseDashboardScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = const [
-    const _DashboardContent(),
-    const _PatientsContent(),
-    const _ReportContent(),
-    const NurseProfileScreen(),
+    _DashboardContent(),
+    _PatientsContent(),
+    _ReportContent(),
+    NurseProfileScreen(),
   ];
 
   @override
