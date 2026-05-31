@@ -1,0 +1,12 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[remote "origin"]
+	url = https://github.com/afaaa21/Tbeats.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "fandra_branch"]
+	remote = origin
+	merge = refs/heads/fandra_branch
+	vscode-merge-base = origin/main

@@ -28,13 +28,27 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   String _durationMonths = '6';
   String _selectedDoctor = 'dr. Bambang Sugeng, Sp.P';
   String _registrationNo = '';
+  String _clinicName = 'Puskesmas Kecamatan';
+  String _clinicAddress = 'Jl. Kesehatan No. 123, Jakarta Selatan';
 
   @override
   void initState() {
     super.initState();
-    // Generate nomor registrasi acak untuk ditampilkan
     final rand = DateTime.now().millisecondsSinceEpoch.toString().substring(7);
     _registrationNo = 'TBC-2026-$rand';
+    _loadNurseProfile();
+  }
+
+  Future<void> _loadNurseProfile() async {
+    try {
+      final profile = await _apiService.getProfileInfo();
+      if (mounted) {
+        setState(() {
+          _clinicName = profile['clinic_name'] ?? _clinicName;
+          _clinicAddress = profile['clinic_address'] ?? _clinicAddress;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -83,13 +97,12 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         'duration_months': int.parse(_durationMonths),
         'phase': _isIntensif ? 'Intensif' : 'Lanjutan',
         'dokter_name': _selectedDoctor,
-        'clinic_name': 'Puskesmas Kecamatan',
-        'clinic_address': 'Jl. Kesehatan No. 123, Jakarta Selatan',
+        'clinic_name': _clinicName,
+        'clinic_address': _clinicAddress,
       };
 
-      // 2. Siapkan 3 jadwal obat standar TBC secara otomatis untuk pasien baru
-      // Rifampisin (07:00), Isoniazid (08:00), Pirazinamid (09:00)
-      final List<Map<String, dynamic>> defaultMeds = [
+      // 2. Jadwal obat default berdasarkan fase: Intensif = 4 obat, Lanjutan = 2 obat
+      final List<Map<String, dynamic>> defaultMeds = _isIntensif ? [
         {
           'nama_obat': 'Rifampisin',
           'takaran': '450mg',
@@ -100,17 +113,39 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         {
           'nama_obat': 'Isoniazid',
           'takaran': '300mg',
-          'jam_minum': '08:00',
+          'jam_minum': '07:30',
           'aturan_makan': 'Sebelum makan pagi',
           'status': 'belumWaktunya',
         },
         {
           'nama_obat': 'Pirazinamid',
-          'takaran': '1000mg',
-          'jam_minum': '09:00',
-          'aturan_makan': 'Setelah makan pagi',
+          'takaran': '1500mg',
+          'jam_minum': '08:00',
+          'aturan_makan': 'Sesudah makan pagi',
           'status': 'belumWaktunya',
-        }
+        },
+        {
+          'nama_obat': 'Etambutol',
+          'takaran': '750mg',
+          'jam_minum': '20:00',
+          'aturan_makan': 'Sesudah makan malam',
+          'status': 'belumWaktunya',
+        },
+      ] : [
+        {
+          'nama_obat': 'Rifampisin',
+          'takaran': '450mg',
+          'jam_minum': '07:00',
+          'aturan_makan': 'Sebelum makan pagi',
+          'status': 'belumWaktunya',
+        },
+        {
+          'nama_obat': 'Isoniazid',
+          'takaran': '300mg',
+          'jam_minum': '07:30',
+          'aturan_makan': 'Sebelum makan pagi',
+          'status': 'belumWaktunya',
+        },
       ];
 
       // 3. Daftarkan akun, profil, dan obat secara otomatis dalam satu transaksi terisolasi via ApiService

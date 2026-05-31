@@ -24,6 +24,7 @@ class Medication {
   MedicationStatus status;
   String? photoPath;
   DateTime? reportedAt;
+  DateTime? createdAt;
 
   Medication({
     required this.id,
@@ -35,6 +36,7 @@ class Medication {
     this.status = MedicationStatus.belumWaktunya,
     this.photoPath,
     this.reportedAt,
+    this.createdAt,
   });
 
   // Factory untuk membaca JSON dari API
@@ -78,6 +80,7 @@ class Medication {
       status: MedicationStatusExtension.fromJsonString(json['status'] ?? 'belumWaktunya'),
       photoPath: json['photo_path'],
       reportedAt: json['reported_at'] != null ? DateTime.parse(json['reported_at']) : null,
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
     );
   }
 

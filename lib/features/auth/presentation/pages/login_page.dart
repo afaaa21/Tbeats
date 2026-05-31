@@ -7,7 +7,6 @@ import '../../../../service/api_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
-
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
@@ -20,20 +19,24 @@ class _LoginPageState extends State<LoginPage> {
   bool _loading  = false;
   String? _error;
 
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
+  }
+
   void _login() async {
     setState(() { _loading = true; _error = null; });
-
     try {
       final data = await _apiService.login(_emailCtrl.text.trim(), _passCtrl.text);
       if (!mounted) return;
-
       final role = data['role'];
-      
       if (role == 'pasien') {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const PatientMainWrapper()),
         );
-      } else if (role == 'perawat') {
+      } else if (role == 'perawat' || role == 'dokter') {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const NurseDashboardScreen()),
         );
@@ -44,17 +47,8 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
       setState(() { _error = e.toString(); });
     } finally {
-      if (mounted) {
-        setState(() { _loading = false; });
-      }
+      if (mounted) setState(() { _loading = false; });
     }
-  }
-
-  @override
-  void dispose() {
-    _emailCtrl.dispose();
-    _passCtrl.dispose();
-    super.dispose();
   }
 
   @override
@@ -63,18 +57,16 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: AppColors.primaryContainer,
       body: Column(
         children: [
-          // ── Hero ──────────────────────────────────────
+          // Hero section
           SizedBox(
-            height: 300,
+            height: MediaQuery.of(context).size.height * 0.35,
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // dekoratif lingkaran
-                Positioned(top: -50, left: -50,
-                  child: _circle(220, Colors.white.withOpacity(0.07))),
-                Positioned(bottom: -60, right: -40,
-                  child: _circle(260, Colors.white.withOpacity(0.07))),
-                // konten brand
+                Positioned(top: -60, left: -60,
+                  child: _circle(240, Colors.white.withOpacity(0.07))),
+                Positioned(bottom: -80, right: -50,
+                  child: _circle(280, Colors.white.withOpacity(0.06))),
                 const SafeArea(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -82,14 +74,10 @@ class _LoginPageState extends State<LoginPage> {
                       Text('TBeats',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 40,
+                          fontSize: 42,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -1,
                         ),
-                      ),
-                      SizedBox(height: 8),
-                      Text('Pendamping Setia Pengobatan Anda',
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
                       ),
                     ],
                   ),
@@ -98,7 +86,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
 
-          // ── Form Area ─────────────────────────────────
+          // Form card
           Expanded(
             child: Container(
               width: double.infinity,
@@ -110,45 +98,71 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 8),
-                    const Text('Masuk ke Akun Anda',
+                    const Text('Selamat Datang',
                       style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.onSurface,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 4),
+                    const Text('Masuk ke akun Anda',
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                    ),
+                    const SizedBox(height: 28),
 
-                    // Input Email
+                    // Email
                     _buildTextField(
                       controller: _emailCtrl,
                       label: 'Email',
+                      hint: 'nama@email.com',
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
                     ),
                     const SizedBox(height: 16),
 
-                    // Input Password
-                    _buildTextField(
-                      controller: _passCtrl,
-                      label: 'Kata Sandi',
-                      icon: Icons.lock_outline,
-                      obscureText: _obscure,
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          color: AppColors.outline,
+                    // Password
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Kata Sandi',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                            TextButton(
+                              onPressed: () {},
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: const Text('Lupa kata sandi?',
+                                style: TextStyle(color: AppColors.primaryContainer, fontSize: 13, fontWeight: FontWeight.w600)),
+                            ),
+                          ],
                         ),
-                        onPressed: () => setState(() => _obscure = !_obscure),
-                      ),
+                        const SizedBox(height: 6),
+                        _buildTextField(
+                          controller: _passCtrl,
+                          icon: Icons.lock_outline,
+                          hint: '••••••••',
+                          obscureText: _obscure,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              color: AppColors.outline,
+                            ),
+                            onPressed: () => setState(() => _obscure = !_obscure),
+                          ),
+                        ),
+                      ],
                     ),
-                    
-                    // Pesan Error
+
                     if (_error != null) ...[
                       const SizedBox(height: 12),
                       Container(
@@ -161,28 +175,14 @@ class _LoginPageState extends State<LoginPage> {
                           children: [
                             const Icon(Icons.error_outline, color: AppColors.danger, size: 20),
                             const SizedBox(width: 8),
-                            Expanded(child: Text(_error!, style: const TextStyle(color: AppColors.danger, fontSize: 13))),
+                            Expanded(child: Text(_error!,
+                              style: const TextStyle(color: AppColors.danger, fontSize: 13))),
                           ],
                         ),
                       ),
                     ],
 
-                    const SizedBox(height: 16),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {}, // TODO: Forgot pass
-                        child: const Text('Lupa Kata Sandi?',
-                          style: TextStyle(
-                            color: AppColors.primaryContainer,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-                    // Tombol Login
+                    const SizedBox(height: 28),
                     SizedBox(
                       width: double.infinity,
                       height: 52,
@@ -191,39 +191,50 @@ class _LoginPageState extends State<LoginPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryContainer,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           elevation: 0,
                         ),
-                        child: _loading 
-                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Text('Masuk', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                        child: _loading
+                            ? const SizedBox(width: 24, height: 24,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            : const Text('Masuk',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                       ),
                     ),
 
-                    const SizedBox(height: 32),
-                    // Link Register (Opsional, khusus perawat/pasien blm punya akun)
+                    const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('Belum memiliki akun?',
-                          style: TextStyle(color: AppColors.outline),
-                        ),
+                        const Text('Belum punya akun?',
+                          style: TextStyle(color: AppColors.outline, fontSize: 14)),
                         TextButton(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const RegisterPage()),
-                            );
-                          },
-                          child: const Text('Daftar di sini',
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const RegisterPage()),
+                          ),
+                          child: const Text('Daftar sebagai Perawat',
                             style: TextStyle(
                               color: AppColors.primaryContainer,
                               fontWeight: FontWeight.w700,
+                              fontSize: 14,
                             ),
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          'Akun pasien dibuat oleh perawat Anda',
+                          style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -236,8 +247,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
+    TextEditingController? controller,
+    String? label,
+    String? hint,
     required IconData icon,
     bool obscureText = false,
     TextInputType? keyboardType,
@@ -250,7 +262,9 @@ class _LoginPageState extends State<LoginPage> {
       style: const TextStyle(fontSize: 15),
       decoration: InputDecoration(
         labelText: label,
+        hintText: hint,
         labelStyle: const TextStyle(color: AppColors.outline),
+        hintStyle: const TextStyle(color: AppColors.outline),
         prefixIcon: Icon(icon, color: AppColors.outline),
         suffixIcon: suffixIcon,
         filled: true,

@@ -13,7 +13,7 @@ DROP TYPE IF EXISTS user_role CASCADE;
 DROP TYPE IF EXISTS aturan_makan_enum CASCADE;
 
 -- 2. Buat ulang ENUM untuk Role
-CREATE TYPE user_role AS ENUM ('perawat', 'pasien');
+CREATE TYPE user_role AS ENUM ('perawat', 'pasien', 'dokter');
 
 -- 3. Buat ulang tabel Profiles (Berdasarkan struktur supabase_schema.sql + kolom klinis lengkap secara bawaan)
 CREATE TABLE public.profiles (
@@ -62,14 +62,16 @@ ALTER TABLE public.medications ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.profiles (id, name, email, role, phone, perawat_id)
+  INSERT INTO public.profiles (id, name, email, role, phone, perawat_id, clinic_name, clinic_address)
   VALUES (
-    new.id, 
-    COALESCE(new.raw_user_meta_data->>'name', ''), 
-    new.email, 
+    new.id,
+    COALESCE(new.raw_user_meta_data->>'name', ''),
+    new.email,
     CAST(COALESCE(new.raw_user_meta_data->>'role', 'pasien') AS user_role),
     new.raw_user_meta_data->>'phone',
-    NULLIF(new.raw_user_meta_data->>'perawat_id', '')::uuid
+    NULLIF(new.raw_user_meta_data->>'perawat_id', '')::uuid,
+    COALESCE(new.raw_user_meta_data->>'clinic_name', 'Puskesmas Kecamatan'),
+    COALESCE(new.raw_user_meta_data->>'clinic_address', 'Jl. Kesehatan No. 123')
   );
   RETURN new;
 END;
@@ -130,3 +132,20 @@ CREATE POLICY "Users can delete medications" ON public.medications
     auth.uid() = user_id OR
     EXISTS (SELECT 1 FROM public.profiles WHERE id = user_id AND perawat_id = auth.uid())
   );
+
+-- ==============================================================================
+-- 8. INDEX PERFORMA
+-- Dibutuhkan agar query checklist mingguan (filter created_at >= Senin) dan
+-- query RLS EXISTS (perawat_id) tidak melakukan full-table scan.
+-- ==============================================================================
+
+-- Index komposit untuk getMedicationsThisWeek: user_id + created_at
+CREATE INDEX IF NOT EXISTS idx_medications_user_created
+  ON public.medications(user_id, created_at DESC);
+
+-- Index untuk relasi perawat-pasien (dipakai di RLS EXISTS & getDaftarPasienKu)
+CREATE INDEX IF NOT EXISTS idx_profiles_perawat_id
+  ON public.profiles(perawat_id);
+
+-- Dokter can view patients they are assigned to (same structure as perawat)
+-- The existing RLS policies already cover dokter since they use the same perawat_id foreign key

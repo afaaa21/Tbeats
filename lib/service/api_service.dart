@@ -4,23 +4,44 @@ import '../core/config/supabase_config.dart';
 class ApiService {
   final SupabaseClient _client = SupabaseConfig.client;
 
-  // 1. REGISTER PERAWAT (Perawat Self-Register)
+  // 1. REGISTER PERAWAT / DOKTER
   Future<Map<String, dynamic>> registerPerawat(
-      String name, String email, String password, String phone) async {
+    String name,
+    String email,
+    String password,
+    String phone, {
+    String role = 'perawat',
+    String? clinicName,
+    String? clinicAddress,
+  }) async {
     try {
       final AuthResponse res = await _client.auth.signUp(
         email: email,
         password: password,
         data: {
           'name': name,
-          'role': 'perawat',
+          'role': role,
           'phone': phone,
+          if (clinicName != null && clinicName.isNotEmpty)
+            'clinic_name': clinicName,
+          if (clinicAddress != null && clinicAddress.isNotEmpty)
+            'clinic_address': clinicAddress,
         },
       );
+      final user = res.user;
+      if (user == null) throw 'Registrasi gagal.';
 
-      if (res.user == null) throw 'Registrasi gagal.';
+      await _ensureProfile(
+        userId: user.id,
+        email: email,
+        name: name,
+        role: role,
+        phone: phone,
+        clinicName: clinicName,
+        clinicAddress: clinicAddress,
+      );
 
-      return {'message': 'Perawat berhasil didaftarkan', 'user': res.user};
+      return {'message': 'Berhasil didaftarkan', 'user': user};
     } on AuthException catch (e) {
       throw e.message;
     } catch (e) {
@@ -44,11 +65,13 @@ class ApiService {
           .from('profiles')
           .select('role')
           .eq('id', userId)
-          .single();
+          .maybeSingle();
+
+      final profileData = profile ?? await _ensureProfileFromUser(res.user!);
 
       return {
         'token': res.session?.accessToken,
-        'role': profile['role'],
+        'role': profileData['role'],
         'user': res.user,
       };
     } on AuthException catch (e) {
@@ -56,6 +79,53 @@ class ApiService {
     } catch (e) {
       throw 'Terjadi kesalahan tidak terduga: $e';
     }
+  }
+
+  Future<Map<String, dynamic>> _ensureProfileFromUser(User user) {
+    final metadata = user.userMetadata ?? <String, dynamic>{};
+    return _ensureProfile(
+      userId: user.id,
+      email: user.email ?? metadata['email']?.toString() ?? '',
+      name: metadata['name']?.toString() ?? '',
+      role: metadata['role']?.toString() ?? 'pasien',
+      phone: metadata['phone']?.toString(),
+      perawatId: metadata['perawat_id']?.toString(),
+      clinicName: metadata['clinic_name']?.toString(),
+      clinicAddress: metadata['clinic_address']?.toString(),
+    );
+  }
+
+  Future<Map<String, dynamic>> _ensureProfile({
+    required String userId,
+    required String email,
+    required String name,
+    required String role,
+    String? phone,
+    String? perawatId,
+    String? clinicName,
+    String? clinicAddress,
+  }) async {
+    final data = <String, dynamic>{
+      'id': userId,
+      'name': name,
+      'email': email,
+      'role': role,
+      if (phone != null && phone.isNotEmpty) 'phone': phone,
+      if (perawatId != null && perawatId.isNotEmpty) 'perawat_id': perawatId,
+      'clinic_name': clinicName?.isNotEmpty == true
+          ? clinicName
+          : 'Puskesmas Kecamatan',
+      'clinic_address': clinicAddress?.isNotEmpty == true
+          ? clinicAddress
+          : 'Jl. Kesehatan No. 123',
+    };
+
+    final result = await _client
+        .from('profiles')
+        .upsert(data)
+        .select()
+        .single();
+    return result;
   }
 
   // 3. DAFTARKAN PASIEN (Oleh Perawat)
@@ -72,32 +142,35 @@ class ApiService {
 
       final perawatId = currentUser.id;
 
-      // tempClient khusus untuk signup pasien, tidak ganggu session perawat
+      // tempClient khusus untuk signup pasien, tidak ganggu session perawat.
+      // Gunakan implicit flow agar tidak butuh asyncStorage (PKCE hanya untuk main client).
       final tempClient = SupabaseClient(
         SupabaseConfig.supabaseUrl,
         SupabaseConfig.supabaseAnonKey,
+        authOptions: const AuthClientOptions(
+          authFlowType: AuthFlowType.implicit,
+        ),
       );
 
       final AuthResponse res = await tempClient.auth.signUp(
         email: email,
         password: password,
-        data: {
-          'name': name,
-          'role': 'pasien',
-          'perawat_id': perawatId,
-        },
+        data: {'name': name, 'role': 'pasien', 'perawat_id': perawatId},
       );
 
       final patientId = res.user?.id;
       if (patientId == null) throw 'Gagal membuat akun pasien.';
 
-      // Tunggu trigger selesai buat profil
-      await Future.delayed(const Duration(seconds: 1));
-
-      // Update data klinis menggunakan session perawat
-      if (profileData != null && profileData.isNotEmpty) {
-        await _client.from('profiles').update(profileData).eq('id', patientId);
-      }
+      // Upsert profil langsung — tidak bergantung pada trigger.
+      // Jika trigger sudah buat profil, ini akan update; jika belum, ini akan insert.
+      await _client.from('profiles').upsert({
+        'id': patientId,
+        'name': name,
+        'email': email,
+        'role': 'pasien',
+        'perawat_id': perawatId,
+        ...?profileData,
+      });
 
       // Insert medications menggunakan session perawat
       if (defaultMeds != null) {
@@ -136,8 +209,12 @@ class ApiService {
   }
 
   // 5. TAMBAH JADWAL OBAT (Oleh Pasien)
-  Future<Map<String, dynamic>> tambahJadwalObat(String namaObat, String takaran,
-      String jamMinum, String aturanMakan) async {
+  Future<Map<String, dynamic>> tambahJadwalObat(
+    String namaObat,
+    String takaran,
+    String jamMinum,
+    String aturanMakan,
+  ) async {
     try {
       final currentUser = _client.auth.currentUser;
       if (currentUser == null) throw 'Sesi pasien tidak ditemukan.';
@@ -152,7 +229,7 @@ class ApiService {
 
       return {
         'message': 'Jadwal obat berhasil ditambahkan',
-        'medication': data.first
+        'medication': data.first,
       };
     } catch (e) {
       throw 'Gagal menambah jadwal obat: $e';
@@ -175,7 +252,70 @@ class ApiService {
     }
   }
 
-  // 7. GET PROFILE INFO (Untuk Pasien & Perawat)
+  // 7. GET MEDICATIONS THIS WEEK (Untuk Checklist Mingguan)
+  Future<List<dynamic>> getMedicationsThisWeek(String? userId) async {
+    try {
+      final uid = userId ?? _client.auth.currentUser?.id;
+      if (uid == null) throw 'Sesi tidak ditemukan.';
+      final now = DateTime.now();
+      final monday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
+      return await _client
+          .from('medications')
+          .select()
+          .eq('user_id', uid)
+          .gte('created_at', monday.toIso8601String())
+          .order('created_at', ascending: true);
+    } catch (e) {
+      throw 'Gagal mengambil data mingguan: $e';
+    }
+  }
+
+  // NEW: Tambah obat untuk pasien (oleh Perawat/Dokter)
+  Future<Map<String, dynamic>> tambahObatPasien(
+    String patientId,
+    String namaObat,
+    String takaran,
+    String jamMinum,
+    String aturanMakan,
+  ) async {
+    try {
+      final data = await _client.from('medications').insert({
+        'user_id': patientId,
+        'nama_obat': namaObat,
+        'takaran': takaran,
+        'jam_minum': jamMinum,
+        'aturan_makan': aturanMakan,
+      }).select();
+      return {
+        'message': 'Jadwal obat berhasil ditambahkan',
+        'medication': data.first,
+      };
+    } catch (e) {
+      throw 'Gagal menambah jadwal obat: $e';
+    }
+  }
+
+  // NEW: Hitung verifikasi bulan ini untuk perawat
+  Future<int> getVerifikasiCountBulanIni() async {
+    try {
+      final patients = await getDaftarPasienKu();
+      if (patients.isEmpty) return 0;
+      final patientIds = patients.map((p) => p['id'].toString()).toList();
+      final now = DateTime.now();
+      final startOfMonth = DateTime(now.year, now.month, 1);
+      final result = await _client
+          .from('medications')
+          .select()
+          .inFilter('user_id', patientIds)
+          .eq('status', 'sudahDiminum')
+          .gte('created_at', startOfMonth.toIso8601String());
+      return (result as List).length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  // 8. GET PROFILE INFO (Untuk Pasien & Perawat)
   Future<Map<String, dynamic>> getProfileInfo() async {
     try {
       final currentUser = _client.auth.currentUser;
@@ -185,7 +325,8 @@ class ApiService {
           .from('profiles')
           .select()
           .eq('id', currentUser.id)
-          .single();
+          .maybeSingle();
+      if (data == null) throw 'Profil tidak ditemukan.';
       return data;
     } catch (e) {
       throw 'Gagal mengambil data profil: $e';
@@ -194,12 +335,11 @@ class ApiService {
 
   // 8. UPDATE PROFILE (Oleh Perawat untuk Pasien, atau update mandiri)
   Future<void> updateProfile(
-      String profileId, Map<String, dynamic> updates) async {
+    String profileId,
+    Map<String, dynamic> updates,
+  ) async {
     try {
-      final Map<String, dynamic> upsertData = {
-        'id': profileId,
-        ...updates,
-      };
+      final Map<String, dynamic> upsertData = {'id': profileId, ...updates};
       await _client.from('profiles').upsert(upsertData);
     } catch (e) {
       throw 'Gagal mengupdate profil: $e';
@@ -209,8 +349,12 @@ class ApiService {
   // 9. GET DETAIL PASIEN (Untuk Perawat)
   Future<Map<String, dynamic>> getPasienDetail(String pasienId) async {
     try {
-      final data =
-          await _client.from('profiles').select().eq('id', pasienId).single();
+      final data = await _client
+          .from('profiles')
+          .select()
+          .eq('id', pasienId)
+          .maybeSingle();
+      if (data == null) throw 'Pasien tidak ditemukan.';
       return data;
     } catch (e) {
       throw 'Gagal mengambil detail pasien: $e';
@@ -218,12 +362,14 @@ class ApiService {
   }
 
   // 10. UPDATE STATUS OBAT (Oleh Pasien/Perawat)
-  Future<void> updateMedicationStatus(String medId, String status,
-      {String? photoPath, String? notes}) async {
+  Future<void> updateMedicationStatus(
+    String medId,
+    String status, {
+    String? photoPath,
+    String? notes,
+  }) async {
     try {
-      final Map<String, dynamic> updates = {
-        'status': status,
-      };
+      final Map<String, dynamic> updates = {'status': status};
       if (photoPath != null) updates['photo_path'] = photoPath;
       if (notes != null) updates['notes'] = notes;
 

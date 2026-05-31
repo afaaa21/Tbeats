@@ -20,6 +20,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   late TabController _tabController;
   final ApiService _apiService = ApiService();
   List<Medication> _medications = [];
+  List<Medication> _weekMedications = [];
   bool _isLoading = true;
   String? _error;
 
@@ -52,9 +53,13 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
 
       final loadedMeds = medsData.map((m) => Medication.fromSupabase(m)).toList();
 
+      final weekData = await _apiService.getMedicationsThisWeek(widget.patient.id);
+      final loadedWeekMeds = weekData.map((m) => Medication.fromSupabase(m)).toList();
+
       if (!mounted) return;
       setState(() {
         _medications = loadedMeds;
+        _weekMedications = loadedWeekMeds;
         _isLoading = false;
       });
     } catch (e) {
@@ -64,6 +69,145 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         _isLoading = false;
       });
     }
+  }
+
+  void _showAddMedSheet() {
+    final nameCtrl = TextEditingController();
+    final doseCtrl = TextEditingController();
+    TimeOfDay? time;
+    String aturan = 'Sebelum makan pagi';
+    bool saving = false;
+
+    const aturanOptions = [
+      'Sebelum makan pagi', 'Sesudah makan pagi',
+      'Sebelum makan siang', 'Sesudah makan siang',
+      'Sebelum makan malam', 'Sesudah makan malam', 'Kapan saja',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20, right: 20, top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                const Text('Tambah Jadwal Obat',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary)),
+              ]),
+              const SizedBox(height: 4),
+              Text('Untuk: ${widget.patient.name}',
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+              const SizedBox(height: 20),
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(
+                  hintText: 'Nama Obat (contoh: Rifampisin)',
+                  prefixIcon: Icon(Icons.medication_outlined)),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: doseCtrl,
+                decoration: const InputDecoration(
+                  hintText: 'Dosis (contoh: 450mg)',
+                  prefixIcon: Icon(Icons.science_outlined)),
+              ),
+              const SizedBox(height: 14),
+              GestureDetector(
+                onTap: () async {
+                  final t = await showTimePicker(
+                    context: ctx, initialTime: const TimeOfDay(hour: 7, minute: 0));
+                  if (t != null) setModalState(() => time = t);
+                },
+                child: Container(
+                  height: 52,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.outlineVariant),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(children: [
+                    const Icon(Icons.access_time_rounded, color: AppColors.outline, size: 20),
+                    const SizedBox(width: 12),
+                    Text(
+                      time == null
+                          ? 'Pilih Jam Minum'
+                          : '${time!.hour.toString().padLeft(2, '0')}:${time!.minute.toString().padLeft(2, '0')} WIB',
+                      style: TextStyle(
+                        color: time == null ? AppColors.textSecondary : AppColors.textPrimary, fontSize: 14),
+                    ),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                value: aturan,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.restaurant_menu_outlined)),
+                items: aturanOptions.map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
+                onChanged: (v) { if (v != null) setModalState(() => aturan = v); },
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: saving ? null : () async {
+                    if (nameCtrl.text.trim().isEmpty || doseCtrl.text.trim().isEmpty || time == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Nama obat, dosis, dan jam wajib diisi.')));
+                      return;
+                    }
+                    setModalState(() => saving = true);
+                    try {
+                      final h = time!.hour.toString().padLeft(2, '0');
+                      final m = time!.minute.toString().padLeft(2, '0');
+                      await _apiService.tambahObatPasien(
+                        widget.patient.id,
+                        nameCtrl.text.trim(),
+                        doseCtrl.text.trim(),
+                        '$h:$m',
+                        aturan,
+                      );
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      _loadData();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Jadwal obat berhasil ditambahkan'),
+                          backgroundColor: AppColors.success,
+                        ));
+                      }
+                    } catch (e) {
+                      setModalState(() => saving = false);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('Gagal: $e'), backgroundColor: AppColors.danger));
+                      }
+                    }
+                  },
+                  child: saving
+                      ? const SizedBox(width: 20, height: 20,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('Simpan Jadwal Obat',
+                          style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _updateStatus(String medId, MedicationStatus status) async {
@@ -128,6 +272,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddMedSheet(),
+        backgroundColor: AppColors.primaryContainer,
+        child: const Icon(Icons.add_rounded, color: Colors.white),
+      ),
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.primaryContainer),
@@ -166,7 +315,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                     ),
                     _WeekHistoryTab(
                       patient: widget.patient,
-                      medications: _medications,
+                      weekMedications: _weekMedications,
                     ),
                   ],
                 ),
@@ -371,30 +520,30 @@ class _TodayEvidenceTab extends StatelessWidget {
 
 class _WeekHistoryTab extends StatelessWidget {
   final Patient patient;
-  final List<Medication> medications;
+  final List<Medication> weekMedications;
 
-  const _WeekHistoryTab({required this.patient, required this.medications});
+  const _WeekHistoryTab({required this.patient, required this.weekMedications});
 
   @override
   Widget build(BuildContext context) {
     final dayLabels = ['SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB', 'MIN'];
 
-    // Generate weekly compliance checklist map based on current database meds
+    final now = DateTime.now();
+    final monday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
+
+    final Map<String, Map<int, MedicationStatus>> medDayMap = {};
+    for (var m in weekMedications) {
+      if (m.createdAt == null) continue;
+      final dayIndex = m.createdAt!.toLocal().difference(monday).inDays;
+      if (dayIndex < 0 || dayIndex > 6) continue;
+      final key = "${m.name} (${m.dose})";
+      medDayMap.putIfAbsent(key, () => {});
+      medDayMap[key]![dayIndex] = m.status;
+    }
+
     final Map<String, List<MedicationStatus?>> checklist = {};
-    for (var m in medications) {
-      final keyName = "${m.name} (${m.dose})";
-      final List<MedicationStatus?> weekStatus = List.generate(7, (index) {
-        final now = DateTime.now();
-        final weekdayIndex = now.weekday - 1; // 0 = Senin, 6 = Minggu
-        if (index == weekdayIndex) {
-          return m.status;
-        } else if (index < weekdayIndex) {
-          return (index % 4 == 0) ? MedicationStatus.terlewat : MedicationStatus.sudahDiminum;
-        } else {
-          return null; // Future days
-        }
-      });
-      checklist[keyName] = weekStatus;
+    for (var entry in medDayMap.entries) {
+      checklist[entry.key] = List.generate(7, (i) => entry.value[i]);
     }
 
     return SingleChildScrollView(

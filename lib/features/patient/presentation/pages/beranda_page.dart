@@ -157,7 +157,7 @@ class _BerandaPageState extends State<BerandaPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Selamat, ${patient.name.split(' ').first} 👋',
+                      '${_greeting()}, ${patient.name.split(' ').first} 👋',
                       style: const TextStyle(
                           fontSize: 18, fontWeight: FontWeight.w700,
                           color: Colors.white),
@@ -178,23 +178,37 @@ class _BerandaPageState extends State<BerandaPage> {
                 const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.danger,
+                    color: AppColors.danger.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
                   ),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Icon(Icons.warning_amber_rounded,
-                          color: Colors.white, size: 20),
+                          color: AppColors.danger, size: 20),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Text(
-                          'Anda telah melewatkan obat $lewat kali. Segera hubungi perawat Anda.',
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 13,
-                              fontWeight: FontWeight.w500),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'PERHATIAN PENTING',
+                              style: TextStyle(
+                                color: AppColors.danger, fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Anda telah melewatkan obat selama $lewat kali berturut-turut.',
+                              style: const TextStyle(
+                                  color: AppColors.danger, fontSize: 13),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -320,6 +334,14 @@ class _BerandaPageState extends State<BerandaPage> {
     );
   }
 
+  String _greeting() {
+    final h = TimeOfDay.now().hour;
+    if (h < 11) return 'Selamat pagi';
+    if (h < 15) return 'Selamat siang';
+    if (h < 18) return 'Selamat sore';
+    return 'Selamat malam';
+  }
+
   Widget _buildCard({required Widget child}) {
     return Container(
       width: double.infinity,
@@ -352,6 +374,11 @@ class _BerandaPageState extends State<BerandaPage> {
   }
 
   void _showNotifications(BuildContext context) {
+    final pending = _meds.where((m) =>
+        m.status == MedicationStatus.terlambat ||
+        m.status == MedicationStatus.belumDilaporkan ||
+        m.status == MedicationStatus.terlewat).toList();
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -365,10 +392,26 @@ class _BerandaPageState extends State<BerandaPage> {
             const Text('Notifikasi',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            _notifTile(Icons.medication_rounded,
-                'Rifampisin belum dilaporkan', 'Jadwal 08:00', AppColors.warning),
-            _notifTile(Icons.cancel_rounded,
-                'Pirazinamid terlewat', 'Jadwal 09:00', AppColors.danger),
+            if (pending.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(
+                  child: Text('Tidak ada notifikasi.',
+                      style: TextStyle(color: AppColors.textSecondary)),
+                ),
+              )
+            else
+              ...pending.map((m) {
+                final hour = m.time.hour.toString().padLeft(2, '0');
+                final min = m.time.minute.toString().padLeft(2, '0');
+                final isLewat = m.status == MedicationStatus.terlewat;
+                return _notifTile(
+                  isLewat ? Icons.cancel_rounded : Icons.medication_rounded,
+                  isLewat ? '${m.name} terlewat' : '${m.name} belum dilaporkan',
+                  'Jadwal $hour:$min',
+                  isLewat ? AppColors.danger : AppColors.warning,
+                );
+              }),
           ],
         ),
       ),

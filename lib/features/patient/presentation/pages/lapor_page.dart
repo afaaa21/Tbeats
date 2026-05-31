@@ -131,17 +131,32 @@ class _LaporPageState extends State<LaporPage> {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Laporan Terkirim!',
+                'Laporan Berhasil Dikirim!',
                 style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Data Anda telah dikirim ke perawat pendamping.',
+              RichText(
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                text: TextSpan(
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.5),
+                  children: [
+                    const TextSpan(text: 'Terima kasih telah melaporkan konsumsi '),
+                    TextSpan(
+                      text: '${widget.medication.name} (${widget.medication.dose})',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                    ),
+                    const TextSpan(text: ' hari ini. Tetap semangat!'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Data Anda telah disinkronkan ke server kesehatan.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
               ),
             ],
           ),
@@ -160,7 +175,7 @@ class _LaporPageState extends State<LaporPage> {
                       borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
-                child: const Text('Selesai'),
+                child: const Text('Kembali ke Beranda'),
               ),
             ),
           ],
@@ -218,33 +233,62 @@ class _LaporPageState extends State<LaporPage> {
                       offset: const Offset(0, 2)),
                 ],
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryContainer,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(Icons.medication_rounded,
-                        color: Colors.white, size: 28),
-                  ),
-                  const SizedBox(width: 14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
-                      Text(
-                        med.name,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: AppColors.textPrimary),
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryContainer.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.medication_rounded,
+                            color: AppColors.primaryContainer, size: 24),
                       ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    med.name,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                        color: AppColors.textPrimary),
+                                  ),
+                                ),
+                                _timingBadge(med),
+                              ],
+                            ),
+                            Text(
+                              '${med.dose}',
+                              style: const TextStyle(
+                                  color: AppColors.textSecondary, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time_rounded,
+                          size: 15, color: AppColors.textSecondary),
+                      const SizedBox(width: 6),
                       Text(
-                        '${med.dose} • $hour:$minute WIB',
+                        'Jadwal: $hour:$minute WIB',
                         style: const TextStyle(
-                            color: AppColors.textSecondary, fontSize: 14),
+                            color: AppColors.textSecondary, fontSize: 13),
                       ),
                     ],
                   ),
@@ -359,14 +403,14 @@ class _LaporPageState extends State<LaporPage> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text('Ambil Foto',
+                          const Text('Ketuk untuk ambil foto',
                               style: TextStyle(
                                   color: AppColors.primaryContainer,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16)),
                           const SizedBox(height: 4),
                           const Text(
-                            'Pastikan wajah dan obat\nterlihat jelas dalam satu bingkai',
+                            'Foto hanya dapat diambil dari kamera',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                                 color: AppColors.textSecondary, fontSize: 13),
@@ -414,7 +458,34 @@ class _LaporPageState extends State<LaporPage> {
                 fillColor: Colors.white,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+
+            // Info tip
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primaryContainer.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.primaryContainer.withValues(alpha: 0.2)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline_rounded,
+                      color: AppColors.primaryContainer, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Pastikan foto obat terlihat jelas sebelum mengirim laporan Anda.',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.primaryContainer,
+                          height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
 
             // Submit button
             SizedBox(
@@ -450,6 +521,30 @@ class _LaporPageState extends State<LaporPage> {
             ),
             const SizedBox(height: 32),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _timingBadge(Medication med) {
+    final now = TimeOfDay.now();
+    final nowMins = now.hour * 60 + now.minute;
+    final schedMins = med.time.hour * 60 + med.time.minute;
+    final isLate = nowMins > schedMins + 15;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: isLate
+            ? AppColors.warning.withValues(alpha: 0.15)
+            : AppColors.success.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Text(
+        isLate ? 'Terlambat' : 'Tepat Waktu',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: isLate ? AppColors.warning : AppColors.success,
         ),
       ),
     );

@@ -50,8 +50,8 @@ class _RiwayatPageState extends State<RiwayatPage> {
       final historyData = await _apiService.getHistoryMedication(currentUser.id);
       final loadedHistory = historyData.map((h) => MedicationHistory.fromSupabase(h)).toList();
 
-      final medsData = await _apiService.getJadwalObatKu();
-      final loadedMeds = medsData.map((m) => Medication.fromSupabase(m)).toList();
+      final weekData = await _apiService.getMedicationsThisWeek(currentUser.id);
+      final weekMeds = weekData.map((m) => Medication.fromSupabase(m)).toList();
 
       int tepat = 0;
       int telat = 0;
@@ -67,34 +67,25 @@ class _RiwayatPageState extends State<RiwayatPage> {
         }
       }
 
-      for (var m in loadedMeds) {
-        if (m.status == MedicationStatus.sudahDiminum) {
-          tepat++;
-        } else if (m.status == MedicationStatus.terlambat) {
-          telat++;
-        } else if (m.status == MedicationStatus.terlewat) {
-          lewat++;
-        }
-      }
-
       final total = tepat + telat + lewat;
       final compliance = total == 0 ? 1.0 : (tepat + telat) / total;
 
+      final now = DateTime.now();
+      final monday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
+
+      final Map<String, Map<int, MedicationStatus>> medDayMap = {};
+      for (var m in weekMeds) {
+        if (m.createdAt == null) continue;
+        final dayIndex = m.createdAt!.toLocal().difference(monday).inDays;
+        if (dayIndex < 0 || dayIndex > 6) continue;
+        final key = "${m.name} (${m.dose})";
+        medDayMap.putIfAbsent(key, () => {});
+        medDayMap[key]![dayIndex] = m.status;
+      }
+
       final Map<String, List<MedicationStatus?>> checklist = {};
-      for (var m in loadedMeds) {
-        final keyName = "${m.name} (${m.dose})";
-        final List<MedicationStatus?> weekStatus = List.generate(7, (index) {
-          final now = DateTime.now();
-          final weekdayIndex = now.weekday - 1; // 0 = Senin, 6 = Minggu
-          if (index == weekdayIndex) {
-            return m.status;
-          } else if (index < weekdayIndex) {
-            return (index % 3 == 0) ? MedicationStatus.terlambat : MedicationStatus.sudahDiminum;
-          } else {
-            return null;
-          }
-        });
-        checklist[keyName] = weekStatus;
+      for (var entry in medDayMap.entries) {
+        checklist[entry.key] = List.generate(7, (i) => entry.value[i]);
       }
 
       if (!mounted) return;

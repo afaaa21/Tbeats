@@ -142,6 +142,9 @@ class _JadwalPageState extends State<JadwalPage> {
                       fontSize: 20, fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary)),
               const SizedBox(height: 4),
+              const Text('Pantau kepatuhan konsumsi obat harian Anda.',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+              const SizedBox(height: 2),
               Text(
                 '${days[now.weekday - 1]}, ${now.day} ${months[now.month - 1]} ${now.year}',
                 style: const TextStyle(
@@ -259,7 +262,7 @@ class _JadwalPageState extends State<JadwalPage> {
                             color: AppColors.textPrimary)),
                     const SizedBox(height: 2),
                     Text(
-                      '${med.schedule} • ${med.schedule == 'Pagi' ? 'Sebelum Makan' : 'Sebelum Tidur'}',
+                      '${med.schedule} • ${med.notes?.isNotEmpty == true ? med.notes! : '-'}',
                       style: const TextStyle(
                           color: AppColors.textSecondary, fontSize: 12)),
                     const SizedBox(height: 2),
