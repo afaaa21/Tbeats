@@ -3,7 +3,16 @@ import 'package:flutter/services.dart';
 import '../../../core/theme/app_theme.dart';
 
 class SuccessModal extends StatelessWidget {
-  const SuccessModal({super.key});
+  final String email;
+  final String password;
+  final String registrationNo;
+
+  const SuccessModal({
+    super.key,
+    required this.email,
+    required this.password,
+    required this.registrationNo,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -62,21 +71,21 @@ class SuccessModal extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.success.withOpacity(0.1)),
               ),
-              child: const Column(
+              child: Column(
                 children: [
                   _CredentialRow(
                     label: 'EMAIL',
-                    value: 'budi@example.com',
+                    value: email,
                     isLast: false,
                   ),
                   _CredentialRow(
                     label: 'PASSWORD',
-                    value: 'xxxxxxxx',
+                    value: password,
                     isLast: false,
                   ),
                   _CredentialRow(
                     label: 'NO. REGISTRASI',
-                    value: 'TBC-2026-083941',
+                    value: registrationNo,
                     isLast: true,
                     isHighlight: true,
                   ),

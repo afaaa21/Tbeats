@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../data/app_data.dart';
 import '../../../../models/models.dart';
+import '../../../../service/api_service.dart';
 
 class LaporPage extends StatefulWidget {
   final Medication medication;
@@ -14,6 +15,8 @@ class _LaporPageState extends State<LaporPage> {
   bool _photoTaken = false;
   bool _submitting = false;
   final _notesCtrl = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
+  String? _pickedImagePath;
 
   @override
   void dispose() {
@@ -21,24 +24,71 @@ class _LaporPageState extends State<LaporPage> {
     super.dispose();
   }
 
-  void _takePhoto() {
-    // Simulate photo capture
-    setState(() => _photoTaken = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Foto berhasil diambil'),
-        backgroundColor: AppColors.success,
-        duration: Duration(seconds: 1),
-      ),
-    );
+  void _takePhoto() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 50,
+      );
+      if (image != null) {
+        setState(() {
+          _photoTaken = true;
+          _pickedImagePath = image.path;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Foto berhasil diambil'),
+              backgroundColor: AppColors.success,
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Fallback ke galeri jika kamera gagal/tidak tersedia
+      try {
+        final XFile? image = await _picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 50,
+        );
+        if (image != null) {
+          setState(() {
+            _photoTaken = true;
+            _pickedImagePath = image.path;
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Foto berhasil dipilih dari galeri'),
+                backgroundColor: AppColors.success,
+                duration: Duration(seconds: 1),
+              ),
+            );
+          }
+        }
+      } catch (err) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal mengambil gambar: $err'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+        }
+      }
+    }
   }
 
   void _retakePhoto() {
-    setState(() => _photoTaken = false);
+    setState(() {
+      _photoTaken = false;
+      _pickedImagePath = null;
+    });
   }
 
   void _submit() async {
-    if (!_photoTaken) {
+    if (!_photoTaken || _pickedImagePath == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Harap ambil foto terlebih dahulu'),
@@ -50,72 +100,82 @@ class _LaporPageState extends State<LaporPage> {
 
     setState(() => _submitting = true);
 
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      // Menandai status obat sebagai 'belumDilaporkan' (menunggu verifikasi perawat)
+      // Kita kirimkan path foto lokal dan keluhan catatan ke database
+      await ApiService().updateMedicationStatus(
+        widget.medication.id,
+        'belumDilaporkan',
+        photoPath: _pickedImagePath,
+        notes: _notesCtrl.text.trim(),
+      );
 
-    // Update medication status
-    final index = AppData.todayMedications
-        .indexWhere((m) => m.id == widget.medication.id);
-    if (index != -1) {
-      AppData.todayMedications[index].status = MedicationStatus.sudahDiminum;
-      AppData.todayMedications[index].reportedAt = DateTime.now();
-    }
+      if (!mounted) return;
+      setState(() => _submitting = false);
 
-    if (!mounted) return;
-    setState(() => _submitting = false);
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: const BoxDecoration(
-                  color: AppColors.success, shape: BoxShape.circle),
-              child: const Icon(Icons.check_rounded,
-                  color: Colors.white, size: 40),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Laporan Terkirim!',
-              style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Data Anda telah dikirim ke perawat pendamping.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: const BoxDecoration(
+                    color: AppColors.success, shape: BoxShape.circle),
+                child: const Icon(Icons.check_rounded,
+                    color: Colors.white, size: 40),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Laporan Terkirim!',
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Data Anda telah dikirim ke perawat pendamping.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              ),
+            ],
+          ),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context); // close dialog
+                  Navigator.pop(context, true); // back to previous with success signal
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryContainer,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: const Text('Selesai'),
+              ),
             ),
           ],
         ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context); // close dialog
-                Navigator.pop(context); // back to previous
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryContainer,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-              child: const Text('Selesai'),
-            ),
-          ),
-        ],
-      ),
-    );
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal mengirim laporan: $e'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+    }
   }
 
   @override

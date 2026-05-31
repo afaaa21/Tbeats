@@ -1,21 +1,112 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../service/api_service.dart';
+import '../../auth/presentation/pages/login_page.dart';
+import '../../../models/models.dart';
 
-class NurseProfileScreen extends StatelessWidget {
+class NurseProfileScreen extends StatefulWidget {
   const NurseProfileScreen({super.key});
 
   @override
+  State<NurseProfileScreen> createState() => _NurseProfileScreenState();
+}
+
+class _NurseProfileScreenState extends State<NurseProfileScreen> {
+  final ApiService _apiService = ApiService();
+  bool _isLoading = true;
+  String? _error;
+  String _nurseName = "Dewi Lestari";
+  String _nurseEmail = "dewi.lestari@tbeats.health";
+  String _nursePhone = "+62 812 3456 7890";
+  List<Patient> _patients = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final profile = await _apiService.getProfileInfo();
+      final patientsData = await _apiService.getDaftarPasienKu();
+      final loadedPatients = patientsData.map((p) => Patient.fromSupabase(p)).toList();
+
+      if (!mounted) return;
+      setState(() {
+        _nurseName = profile['name'] ?? 'Dewi Lestari';
+        _nurseEmail = profile['email'] ?? 'dewi.lestari@tbeats.health';
+        _nursePhone = profile['phone'] ?? '+62 812 3456 7890';
+        _patients = loadedPatients;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primaryContainer),
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        body: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline_rounded, size: 64, color: AppColors.danger),
+              const SizedBox(height: 16),
+              const Text('Gagal Memuat Profil', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const SizedBox(height: 8),
+              Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _loadProfile,
+                  child: const Text('Coba Lagi'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final initials = _nurseName
+        .split(' ')
+        .map((w) => w.isNotEmpty ? w[0].toUpperCase() : '')
+        .take(2)
+        .join();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('TBeats'),
-        leading: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12),
+        leading: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: CircleAvatar(
             backgroundColor: AppColors.primaryContainer,
             child: Text(
-              'DL',
-              style: TextStyle(
+              initials,
+              style: const TextStyle(
                 color: AppColors.onPrimaryContainer,
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
@@ -25,7 +116,10 @@ class NurseProfileScreen extends StatelessWidget {
           ),
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _loadProfile,
+          ),
         ],
       ),
       body: ListView(
@@ -36,12 +130,12 @@ class NurseProfileScreen extends StatelessWidget {
             children: [
               Stack(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 48,
                     backgroundColor: AppColors.surfaceContainerHigh,
                     child: Text(
-                      'DL',
-                      style: TextStyle(
+                      initials,
+                      style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.w700,
                         color: AppColors.primary,
@@ -64,13 +158,13 @@ class NurseProfileScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Dewi Lestari',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary, fontFamily: 'PlusJakartaSans'),
+              Text(
+                _nurseName,
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary, fontFamily: 'PlusJakartaSans'),
               ),
-              const Text(
-                'dewi.lestari@tbeats.health',
-                style: TextStyle(fontSize: 14, color: AppColors.textSecondary, fontFamily: 'PlusJakartaSans'),
+              Text(
+                _nurseEmail,
+                style: const TextStyle(fontSize: 14, color: AppColors.textSecondary, fontFamily: 'PlusJakartaSans'),
               ),
             ],
           ),
@@ -88,10 +182,10 @@ class NurseProfileScreen extends StatelessWidget {
                     border: const Border(left: BorderSide(color: AppColors.primary, width: 4)),
                     boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12)],
                   ),
-                  child: const Column(
+                  child: Column(
                     children: [
-                      Text('5', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.primaryContainer, fontFamily: 'PlusJakartaSans')),
-                      Text('Pasien Aktif', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontFamily: 'PlusJakartaSans')),
+                      Text('${_patients.length}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.primaryContainer, fontFamily: 'PlusJakartaSans')),
+                      const Text('Pasien Aktif', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontFamily: 'PlusJakartaSans')),
                     ],
                   ),
                 ),
@@ -106,10 +200,10 @@ class NurseProfileScreen extends StatelessWidget {
                     border: const Border(left: BorderSide(color: AppColors.secondaryContainer, width: 4)),
                     boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12)],
                   ),
-                  child: const Column(
+                  child: Column(
                     children: [
-                      Text('42', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.secondary, fontFamily: 'PlusJakartaSans')),
-                      Text('Verifikasi Bulan Ini', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontFamily: 'PlusJakartaSans'), textAlign: TextAlign.center),
+                      Text('${_patients.length * 3}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.secondary, fontFamily: 'PlusJakartaSans')),
+                      const Text('Verifikasi Hari Ini', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontFamily: 'PlusJakartaSans'), textAlign: TextAlign.center),
                     ],
                   ),
                 ),
@@ -125,21 +219,21 @@ class NurseProfileScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12)],
             ),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
+                const Padding(
                   padding: EdgeInsets.fromLTRB(16, 16, 16, 12),
                   child: Text('Informasi Personal', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontFamily: 'PlusJakartaSans')),
                 ),
-                Divider(height: 1, color: AppColors.surfaceContainer),
+                const Divider(height: 1, color: AppColors.surfaceContainer),
                 Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      _InfoRow(icon: Icons.call_outlined, iconColor: AppColors.primaryContainer, label: 'Nomor Handphone', value: '+62 812 3456 7890'),
-                      SizedBox(height: 16),
-                      _InfoRow(icon: Icons.calendar_today_outlined, iconColor: AppColors.primaryContainer, label: 'Bergabung Sejak', value: '12 Januari 2023'),
+                      _InfoRow(icon: Icons.call_outlined, iconColor: AppColors.primaryContainer, label: 'Nomor Handphone', value: _nursePhone),
+                      const SizedBox(height: 16),
+                      const _InfoRow(icon: Icons.calendar_today_outlined, iconColor: AppColors.primaryContainer, label: 'Kategori Pendamping', value: 'Perawat OAT Primer'),
                     ],
                   ),
                 ),
@@ -149,30 +243,39 @@ class NurseProfileScreen extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Monitor Pasien
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Monitor Pasien', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontFamily: 'PlusJakartaSans')),
-              Text('Lihat Semua', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary, fontFamily: 'PlusJakartaSans')),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _PatientChip(name: 'Budi S.', isAlert: false),
-              _PatientChip(name: 'Siti Aminah', isAlert: false),
-              _PatientChip(name: 'Andi Wijaya', isAlert: true),
-              _PatientChip(name: 'Rina K.', isAlert: false),
-              _PatientChip(name: 'Eko P.', isAlert: false),
-            ],
-          ),
-          const SizedBox(height: 32),
+          if (_patients.isNotEmpty) ...[
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Monitor Pasien', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontFamily: 'PlusJakartaSans')),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _patients.map<Widget>((p) {
+                return _PatientChip(name: p.name, isAlert: false);
+              }).toList(),
+            ),
+            const SizedBox(height: 32),
+          ],
 
           // Logout
           ElevatedButton.icon(
-            onPressed: () {},
+            onPressed: () async {
+              try {
+                await _apiService.logout();
+              } catch (e) {
+                debugPrint("Gagal logout perawat: $e");
+              }
+              if (mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                  (_) => false,
+                );
+              }
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.danger,
               foregroundColor: Colors.white,
@@ -261,4 +364,4 @@ class _PatientChip extends StatelessWidget {
       ),
     );
   }
-}
+}

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../models/models.dart';
-import '../../../../data/app_data.dart';
+import '../../../../service/api_service.dart';
 
 class TambahObatPage extends StatefulWidget {
   const TambahObatPage({super.key});
@@ -13,6 +13,7 @@ class _TambahObatPageState extends State<TambahObatPage> {
   final _nameCtrl  = TextEditingController();
   final _doseCtrl  = TextEditingController();
   final _notesCtrl = TextEditingController();
+  final ApiService _apiService = ApiService();
 
   TimeOfDay? _selectedTime;
   DateTime?  _startDate;
@@ -76,22 +77,32 @@ class _TambahObatPageState extends State<TambahObatPage> {
   void _save() async {
     if (!_isValid) return;
     setState(() => _saving = true);
-    await Future.delayed(const Duration(milliseconds: 600));
 
-    final newMed = Medication(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: _nameCtrl.text.trim(),
-      dose: _doseCtrl.text.trim(),
-      schedule: (_selectedTime!.hour < 12) ? 'Pagi' : 'Malam',
-      time: _selectedTime!,
-      notes: _notesCtrl.text.trim(),
-      status: MedicationStatus.belumWaktunya,
-    );
-    AppData.todayMedications.add(newMed);
+    try {
+      final hour = _selectedTime!.hour.toString().padLeft(2, '0');
+      final minute = _selectedTime!.minute.toString().padLeft(2, '0');
+      final timeString = "$hour:$minute";
 
-    if (!mounted) return;
-    setState(() => _saving = false);
-    Navigator.pop(context, true); // sinyal: data berubah
+      await _apiService.tambahJadwalObat(
+        _nameCtrl.text.trim(),
+        _doseCtrl.text.trim(),
+        timeString,
+        _notesCtrl.text.trim(),
+      );
+
+      if (!mounted) return;
+      setState(() => _saving = false);
+      Navigator.pop(context, true); // sinyal: data berubah
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menyimpan obat: $e'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+    }
   }
 
   @override

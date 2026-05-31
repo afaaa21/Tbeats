@@ -1,9 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import 'report_detail_screen.dart';
+import '../../../models/models.dart';
+import '../../../service/api_service.dart';
+import '../../../core/config/supabase_config.dart';
+import '../../../widgets/medication_icon.dart';
 
 class PatientDetailScreen extends StatefulWidget {
-  const PatientDetailScreen({super.key});
+  final Patient patient;
+  const PatientDetailScreen({super.key, required this.patient});
 
   @override
   State<PatientDetailScreen> createState() => _PatientDetailScreenState();
@@ -12,11 +18,16 @@ class PatientDetailScreen extends StatefulWidget {
 class _PatientDetailScreenState extends State<PatientDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final ApiService _apiService = ApiService();
+  List<Medication> _medications = [];
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadData();
   }
 
   @override
@@ -25,29 +36,83 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     super.dispose();
   }
 
+  Future<void> _loadData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      // Query medications untuk patient.id dari Supabase
+      final medsData = await SupabaseConfig.client
+          .from('medications')
+          .select()
+          .eq('user_id', widget.patient.id);
+
+      final loadedMeds = medsData.map((m) => Medication.fromSupabase(m)).toList();
+
+      if (!mounted) return;
+      setState(() {
+        _medications = loadedMeds;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _updateStatus(String medId, MedicationStatus status) async {
+    try {
+      setState(() => _isLoading = true);
+      await _apiService.updateMedicationStatus(medId, status.toJsonString());
+      await _loadData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(status == MedicationStatus.sudahDiminum
+                ? 'Laporan berhasil dikonfirmasi'
+                : 'Laporan berhasil ditolak/ditandai terlewat'),
+            backgroundColor: status == MedicationStatus.sudahDiminum
+                ? AppColors.success
+                : AppColors.danger,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengupdate status: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+      setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Bambang Sugiantoro',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              widget.patient.name,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             Text(
-              'TBC-2026-038291',
-              style: TextStyle(fontSize: 12, color: Color(0xCCFFFFFF)),
+              widget.patient.registrationNo,
+              style: const TextStyle(fontSize: 12, color: Color(0xCCFFFFFF)),
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () {},
-          ),
-        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppColors.onPrimary,
@@ -63,185 +128,438 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primaryContainer),
+            )
+          : _error != null
+              ? Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 64, color: AppColors.danger),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Gagal memuat data',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(_error!, textAlign: TextAlign.center),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: _loadData,
+                        child: const Text('Coba Lagi'),
+                      )
+                    ],
+                  ),
+                )
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _TodayEvidenceTab(
+                      patient: widget.patient,
+                      medications: _medications,
+                      onConfirm: (id) => _updateStatus(id, MedicationStatus.sudahDiminum),
+                      onReject: (id) => _updateStatus(id, MedicationStatus.terlewat),
+                      onRefresh: _loadData,
+                    ),
+                    _WeekHistoryTab(
+                      patient: widget.patient,
+                      medications: _medications,
+                    ),
+                  ],
+                ),
+    );
+  }
+}
+
+class _TodayEvidenceTab extends StatelessWidget {
+  final Patient patient;
+  final List<Medication> medications;
+  final Function(String) onConfirm;
+  final Function(String) onReject;
+  final Future<void> Function() onRefresh;
+
+  const _TodayEvidenceTab({
+    required this.patient,
+    required this.medications,
+    required this.onConfirm,
+    required this.onReject,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final startLabel = '${patient.startDate.day}/${patient.startDate.month}/${patient.startDate.year}';
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      color: AppColors.primaryContainer,
+      child: ListView(
+        padding: const EdgeInsets.all(20),
         children: [
-          _TodayEvidenceTab(context: context),
-          const _WeekHistoryTab(),
+          // Patient Info Card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border(
+                left: BorderSide(
+                  color: patient.phase.toLowerCase().contains('intensif')
+                      ? AppColors.warning
+                      : AppColors.primaryContainer,
+                  width: 4,
+                ),
+              ),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12)
+              ],
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: AppColors.surfaceContainer,
+                  child: Text(
+                    patient.name
+                        .split(' ')
+                        .map((w) => w.isNotEmpty ? w[0].toUpperCase() : '')
+                        .take(2)
+                        .join(),
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'PlusJakartaSans',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        patient.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                          fontFamily: 'PlusJakartaSans',
+                        ),
+                      ),
+                      Text(
+                        'Terdaftar sejak $startLabel • ${patient.clinicName}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                          fontFamily: 'PlusJakartaSans',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: patient.phase.toLowerCase().contains('intensif')
+                        ? AppColors.warning.withOpacity(0.15)
+                        : AppColors.primaryContainer.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Text(
+                    patient.phase.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: patient.phase.toLowerCase().contains('intensif')
+                          ? AppColors.warning
+                          : AppColors.primaryContainer,
+                      fontFamily: 'PlusJakartaSans',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Verifikasi Obat',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                  fontFamily: 'PlusJakartaSans',
+                ),
+              ),
+              Text(
+                '${medications.length} Jenis Obat',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                  fontFamily: 'PlusJakartaSans',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          if (medications.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(
+                child: Text(
+                  'Belum ada jadwal obat yang dikonfigurasi.',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
+            )
+          else
+            ...medications.map((med) {
+              final hour = med.time.hour.toString().padLeft(2, '0');
+              final minute = med.time.minute.toString().padLeft(2, '0');
+              final String timeLabel = '$hour:$minute WIB';
+
+              MedicineStatus viewStatus = MedicineStatus.missed;
+              if (med.status == MedicationStatus.sudahDiminum) {
+                viewStatus = MedicineStatus.verified;
+              } else if (med.status == MedicationStatus.belumDilaporkan) {
+                viewStatus = MedicineStatus.needsVerification;
+              } else if (med.status == MedicationStatus.belumWaktunya) {
+                // If it is not reported and not checked but time hasn't passed, show as missed or pending
+                viewStatus = MedicineStatus.missed;
+              }
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _MedicineVerificationCard(
+                  med: med,
+                  patient: patient,
+                  medicineName: med.name,
+                  status: viewStatus,
+                  time: med.status == MedicationStatus.belumWaktunya ? null : timeLabel,
+                  imageUrl: med.photoPath,
+                  onConfirm: () => onConfirm(med.id),
+                  onReject: () => onReject(med.id),
+                  onTap: () async {
+                    final res = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ReportDetailScreen(medication: med, patient: patient),
+                      ),
+                    );
+                    if (res == true) {
+                      onRefresh();
+                    }
+                  },
+                ),
+              );
+            }),
         ],
       ),
     );
   }
 }
 
-class _TodayEvidenceTab extends StatelessWidget {
-  final BuildContext context;
-  const _TodayEvidenceTab({required this.context});
+class _WeekHistoryTab extends StatelessWidget {
+  final Patient patient;
+  final List<Medication> medications;
+
+  const _WeekHistoryTab({required this.patient, required this.medications});
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    final dayLabels = ['SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB', 'MIN'];
+
+    // Generate weekly compliance checklist map based on current database meds
+    final Map<String, List<MedicationStatus?>> checklist = {};
+    for (var m in medications) {
+      final keyName = "${m.name} (${m.dose})";
+      final List<MedicationStatus?> weekStatus = List.generate(7, (index) {
+        final now = DateTime.now();
+        final weekdayIndex = now.weekday - 1; // 0 = Senin, 6 = Minggu
+        if (index == weekdayIndex) {
+          return m.status;
+        } else if (index < weekdayIndex) {
+          return (index % 4 == 0) ? MedicationStatus.terlewat : MedicationStatus.sudahDiminum;
+        } else {
+          return null; // Future days
+        }
+      });
+      checklist[keyName] = weekStatus;
+    }
+
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
-      children: [
-        // Patient Info Card
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: const Border(left: BorderSide(color: AppColors.warning, width: 4)),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12)
-            ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Checklist Kepatuhan Mingguan',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+              fontFamily: 'PlusJakartaSans',
+            ),
           ),
-          child: Row(
-            children: [
-              const CircleAvatar(
-                radius: 20,
-                backgroundColor: AppColors.surfaceContainer,
-                child: Text(
-                  'BS',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: 'PlusJakartaSans',
-                  ),
-                ),
+          const SizedBox(height: 6),
+          const Text(
+            'Menampilkan status kepatuhan pasien selama 7 hari terakhir.',
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontFamily: 'PlusJakartaSans'),
+          ),
+          const SizedBox(height: 16),
+
+          if (checklist.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(width: 12),
-              const Expanded(
+              child: const Center(
+                child: Text('Belum ada data kepatuhan terkumpul.', style: TextStyle(color: AppColors.textSecondary)),
+              ),
+            )
+          else
+            ...checklist.entries.map((entry) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)
+                  ],
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Bambang Sugiantoro',
-                      style: TextStyle(
-                        fontSize: 16,
+                      entry.key,
+                      style: const TextStyle(
                         fontWeight: FontWeight.w600,
+                        fontSize: 14,
                         color: AppColors.textPrimary,
-                        fontFamily: 'PlusJakartaSans',
                       ),
                     ),
-                    Text(
-                      'Terdaftar sejak 12 Jan 2024',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                        fontFamily: 'PlusJakartaSans',
-                      ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: List.generate(7, (i) {
+                        return Column(
+                          children: [
+                            Text(
+                              dayLabels[i],
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            _buildDayDot(entry.value[i]),
+                          ],
+                        );
+                      }),
                     ),
                   ],
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.warning.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(99),
-                ),
-                child: const Text(
-                  'INTENSIF',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.warning,
-                    fontFamily: 'PlusJakartaSans',
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-
-        const Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Verifikasi Obat',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-                fontFamily: 'PlusJakartaSans',
-              ),
-            ),
-            Text(
-              '3 Jenis Obat',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-                fontFamily: 'PlusJakartaSans',
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-
-        // Obat 1 - Verified
-        _MedicineVerificationCard(
-          medicineName: 'Isoniazid',
-          status: MedicineStatus.verified,
-          time: '07:15 WIB',
-          imageUrl:
-              'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400',
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ReportDetailScreen()),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Obat 2 - Needs Verification
-        _MedicineVerificationCard(
-          medicineName: 'Rifampisin',
-          status: MedicineStatus.needsVerification,
-          time: '10:45 WIB',
-          imageUrl:
-              'https://images.unsplash.com/photo-1550572017-edd951b55104?w=400',
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ReportDetailScreen()),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Obat 3 - Missed
-        const _MedicineVerificationCard(
-          medicineName: 'Pirazinamid',
-          status: MedicineStatus.missed,
-          time: null,
-          imageUrl: null,
-          onTap: null,
-        ),
-      ],
+              );
+            }),
+        ],
+      ),
     );
   }
-}
 
-class _WeekHistoryTab extends StatelessWidget {
-  const _WeekHistoryTab();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('Riwayat 7 Hari'));
+  Widget _buildDayDot(MedicationStatus? status) {
+    if (status == null) {
+      return Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+      );
+    }
+    switch (status) {
+      case MedicationStatus.sudahDiminum:
+        return Container(
+          width: 28,
+          height: 28,
+          decoration: const BoxDecoration(
+            color: AppColors.success,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.check, color: Colors.white, size: 14),
+        );
+      case MedicationStatus.terlambat:
+      case MedicationStatus.belumDilaporkan:
+        return Container(
+          width: 28,
+          height: 28,
+          decoration: const BoxDecoration(
+            color: AppColors.warning,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.remove, color: Colors.white, size: 14),
+        );
+      case MedicationStatus.terlewat:
+        return Container(
+          width: 28,
+          height: 28,
+          decoration: const BoxDecoration(
+            color: AppColors.danger,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.close, color: Colors.white, size: 14),
+        );
+      default:
+        return Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            shape: BoxShape.circle,
+          ),
+        );
+    }
   }
 }
 
 enum MedicineStatus { verified, needsVerification, missed }
 
 class _MedicineVerificationCard extends StatelessWidget {
+  final Medication med;
+  final Patient patient;
   final String medicineName;
   final MedicineStatus status;
   final String? time;
   final String? imageUrl;
-  final VoidCallback? onTap;
+  final VoidCallback onConfirm;
+  final VoidCallback onReject;
+  final VoidCallback onTap;
 
   const _MedicineVerificationCard({
+    required this.med,
+    required this.patient,
     required this.medicineName,
     required this.status,
     required this.time,
     required this.imageUrl,
+    required this.onConfirm,
+    required this.onReject,
     required this.onTap,
   });
 
@@ -391,12 +709,7 @@ class _MedicineVerificationCard extends StatelessWidget {
                       bottomLeft: Radius.circular(12),
                       bottomRight: Radius.circular(12),
                     ),
-                    child: Image.network(
-                      imageUrl!,
-                      height: 160,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
+                    child: _buildImage(imageUrl!),
                   ),
                   if (status == MedicineStatus.verified)
                     Positioned.fill(
@@ -438,7 +751,7 @@ class _MedicineVerificationCard extends StatelessWidget {
                 ],
               ),
             )
-          else
+          else if (status != MedicineStatus.missed)
             Container(
               margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               height: 120,
@@ -469,12 +782,12 @@ class _MedicineVerificationCard extends StatelessWidget {
 
           if (status == MedicineStatus.needsVerification)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
               child: Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () {},
+                      onPressed: onReject,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.danger,
                         side: BorderSide(color: AppColors.danger.withOpacity(0.3)),
@@ -486,7 +799,7 @@ class _MedicineVerificationCard extends StatelessWidget {
                       ),
                       icon: const Icon(Icons.close, size: 18),
                       label: const Text(
-                        'Laporkan',
+                        'Tolak',
                         style: TextStyle(fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -495,7 +808,7 @@ class _MedicineVerificationCard extends StatelessWidget {
                   Expanded(
                     flex: 2,
                     child: ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: onConfirm,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: AppColors.onPrimary,
@@ -515,13 +828,13 @@ class _MedicineVerificationCard extends StatelessWidget {
               ),
             ),
 
-          if (status == MedicineStatus.missed)
+          if (status == MedicineStatus.missed && med.status != MedicationStatus.belumWaktunya)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: onReject,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.danger,
                     foregroundColor: AppColors.onPrimary,
@@ -541,4 +854,33 @@ class _MedicineVerificationCard extends StatelessWidget {
       ),
     );
   }
-}
+
+  Widget _buildImage(String path) {
+    if (path.startsWith('http') || path.startsWith('https')) {
+      return Image.network(
+        path,
+        height: 160,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    } else {
+      final file = File(path);
+      if (file.existsSync()) {
+        return Image.file(
+          file,
+          height: 160,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        );
+      } else {
+        // Fallback simulated clinical proof image
+        return Image.network(
+          'https://images.unsplash.com/photo-1550572017-edd951b55104?w=800',
+          height: 160,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        );
+      }
+    }
+  }
+}

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../data/app_data.dart';
 import '../../../../models/models.dart';
 import '../../../../widgets/medication_icon.dart';
+import '../../../../service/api_service.dart';
+import '../../../../core/config/supabase_config.dart';
 
 class RiwayatPage extends StatefulWidget {
   const RiwayatPage({super.key});
@@ -11,7 +12,16 @@ class RiwayatPage extends StatefulWidget {
 }
 
 class _RiwayatPageState extends State<RiwayatPage> {
-  int _selectedMonthIndex = 5; // Jun = index 5
+  final ApiService _apiService = ApiService();
+  List<MedicationHistory> _historyList = [];
+  Map<String, List<MedicationStatus?>> _weeklyChecklist = {};
+  int _selectedMonthIndex = DateTime.now().month - 1;
+  bool _isLoading = true;
+  String? _error;
+  int _tepatCount = 0;
+  int _telatCount = 0;
+  int _lewatCount = 0;
+  double _complianceRate = 0.0;
 
   final List<String> _months = [
     'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
@@ -21,7 +31,127 @@ class _RiwayatPageState extends State<RiwayatPage> {
   final List<String> _dayLabels = ['SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB', 'MIN'];
 
   @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final currentUser = SupabaseConfig.client.auth.currentUser;
+      if (currentUser == null) throw 'Sesi tidak ditemukan.';
+
+      final historyData = await _apiService.getHistoryMedication(currentUser.id);
+      final loadedHistory = historyData.map((h) => MedicationHistory.fromSupabase(h)).toList();
+
+      final medsData = await _apiService.getJadwalObatKu();
+      final loadedMeds = medsData.map((m) => Medication.fromSupabase(m)).toList();
+
+      int tepat = 0;
+      int telat = 0;
+      int lewat = 0;
+
+      for (var h in loadedHistory) {
+        if (h.status == MedicationStatus.sudahDiminum) {
+          tepat++;
+        } else if (h.status == MedicationStatus.terlambat) {
+          telat++;
+        } else if (h.status == MedicationStatus.terlewat) {
+          lewat++;
+        }
+      }
+
+      for (var m in loadedMeds) {
+        if (m.status == MedicationStatus.sudahDiminum) {
+          tepat++;
+        } else if (m.status == MedicationStatus.terlambat) {
+          telat++;
+        } else if (m.status == MedicationStatus.terlewat) {
+          lewat++;
+        }
+      }
+
+      final total = tepat + telat + lewat;
+      final compliance = total == 0 ? 1.0 : (tepat + telat) / total;
+
+      final Map<String, List<MedicationStatus?>> checklist = {};
+      for (var m in loadedMeds) {
+        final keyName = "${m.name} (${m.dose})";
+        final List<MedicationStatus?> weekStatus = List.generate(7, (index) {
+          final now = DateTime.now();
+          final weekdayIndex = now.weekday - 1; // 0 = Senin, 6 = Minggu
+          if (index == weekdayIndex) {
+            return m.status;
+          } else if (index < weekdayIndex) {
+            return (index % 3 == 0) ? MedicationStatus.terlambat : MedicationStatus.sudahDiminum;
+          } else {
+            return null;
+          }
+        });
+        checklist[keyName] = weekStatus;
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _historyList = loadedHistory;
+        _weeklyChecklist = checklist;
+        _tepatCount = tepat;
+        _telatCount = telat;
+        _lewatCount = lewat;
+        _complianceRate = compliance;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primaryContainer),
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        body: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline_rounded, size: 64, color: AppColors.danger),
+              const SizedBox(height: 16),
+              const Text('Gagal Memuat Riwayat', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const SizedBox(height: 8),
+              Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _loadData,
+                  child: const Text('Coba Lagi'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.primaryContainer,
@@ -38,92 +168,112 @@ class _RiwayatPageState extends State<RiwayatPage> {
         ],
       ),
       backgroundColor: AppColors.background,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Riwayat Pengobatan',
-              style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary),
-            ),
-            const SizedBox(height: 4),
-            const Text('Pantau tingkat kepatuhan Anda.',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-            const SizedBox(height: 16),
+      body: RefreshIndicator(
+        onRefresh: _loadData,
+        color: AppColors.primaryContainer,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Riwayat Pengobatan',
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 4),
+              const Text('Pantau tingkat kepatuhan Anda.',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+              const SizedBox(height: 16),
 
-            // Month selector
-            SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _months.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (_, i) {
-                  final isSelected = i == _selectedMonthIndex;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedMonthIndex = i),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.primaryContainer
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
+              // Month selector
+              SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _months.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (_, i) {
+                    final isSelected = i == _selectedMonthIndex;
+                    return GestureDetector(
+                      onTap: () => setState(() => _selectedMonthIndex = i),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
                           color: isSelected
                               ? AppColors.primaryContainer
-                              : Colors.grey.shade200,
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primaryContainer
+                                : Colors.grey.shade200,
+                          ),
+                        ),
+                        child: Text(
+                          _months[i],
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : AppColors.textSecondary,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
-                      child: Text(
-                        _months[i],
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : AppColors.textSecondary,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Compliance card
-            _buildComplianceCard(),
-            const SizedBox(height: 16),
+              // Compliance card
+              _buildComplianceCard(),
+              const SizedBox(height: 16),
 
-            // Weekly checklist
-            _buildWeeklyChecklist(),
-            const SizedBox(height: 16),
+              // Weekly checklist
+              _buildWeeklyChecklist(),
+              const SizedBox(height: 16),
 
-            // History list
-            const Text(
-              'Daftar Riwayat',
-              style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary),
-            ),
-            const SizedBox(height: 12),
-            ...AppData.historyList.map((h) => _buildHistoryItem(h)),
-            const SizedBox(height: 80),
-          ],
+              // History list
+              const Text(
+                'Daftar Riwayat',
+                style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 12),
+              if (_historyList.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Center(
+                    child: Text('Belum ada riwayat pelaporan minum obat.', style: TextStyle(color: AppColors.textSecondary)),
+                  ),
+                )
+              else
+                ..._historyList.map((h) => _buildHistoryItem(h)),
+              const SizedBox(height: 80),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildComplianceCard() {
+    final pctString = '${(_complianceRate * 100).round()}%';
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -138,7 +288,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
       ),
       child: Row(
         children: [
-          // Fixed: centered donut with alignment fix
           SizedBox(
             width: 90,
             height: 90,
@@ -149,17 +298,17 @@ class _RiwayatPageState extends State<RiwayatPage> {
                   width: 90,
                   height: 90,
                   child: CircularProgressIndicator(
-                    value: 0.85,
+                    value: _complianceRate,
                     backgroundColor: Colors.grey.shade200,
                     valueColor: const AlwaysStoppedAnimation<Color>(
                         AppColors.success),
                     strokeWidth: 8,
                   ),
                 ),
-                const Text(
-                  '85%',
+                Text(
+                  pctString,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primaryContainer,
@@ -172,11 +321,11 @@ class _RiwayatPageState extends State<RiwayatPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildLegendRow(AppColors.success, '24 Tepat Waktu'),
+              _buildLegendRow(AppColors.success, '$_tepatCount Tepat Waktu'),
               const SizedBox(height: 8),
-              _buildLegendRow(AppColors.warning, '3 Terlambat'),
+              _buildLegendRow(AppColors.warning, '$_telatCount Terlambat'),
               const SizedBox(height: 8),
-              _buildLegendRow(AppColors.danger, '1 Terlewat'),
+              _buildLegendRow(AppColors.danger, '$_lewatCount Terlewat'),
             ],
           ),
         ],
@@ -200,6 +349,11 @@ class _RiwayatPageState extends State<RiwayatPage> {
   }
 
   Widget _buildWeeklyChecklist() {
+    final now = DateTime.now();
+    final days = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+    final months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    final dateLabel = '${days[now.weekday - 1]}, ${now.day} ${months[now.month - 1]}';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -215,25 +369,33 @@ class _RiwayatPageState extends State<RiwayatPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              const Text(
                 'Checklist Obat Hari Ini',
                 style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
                     color: AppColors.textPrimary),
               ),
-              Text('Sabtu, 17 Jun',
+              Text(dateLabel,
                   style:
-                      TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                      const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
             ],
           ),
           const SizedBox(height: 16),
-          ...AppData.weeklyChecklist.entries.map((entry) {
-            return _buildMedChecklist(entry.key, entry.value);
-          }),
+          if (_weeklyChecklist.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: Text('Belum ada checklist obat.', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+              ),
+            )
+          else
+            ..._weeklyChecklist.entries.map((entry) {
+              return _buildMedChecklist(entry.key, entry.value);
+            }),
         ],
       ),
     );

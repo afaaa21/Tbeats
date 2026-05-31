@@ -3,6 +3,7 @@ import '../models/models.dart';
 
 class AppData {
   static final Patient patient = Patient(
+    id: 'dummy-patient-id',
     name: 'Budi Santoso',
     registrationNo: 'TBC-2026-038291',
     patientId: 'TB-2023-0891',

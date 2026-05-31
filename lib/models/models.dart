@@ -59,6 +59,28 @@ class Medication {
     );
   }
 
+  // Factory untuk membaca data dari Supabase (Indonesian snake_case columns)
+  factory Medication.fromSupabase(Map<String, dynamic> json) {
+    final String jamMinum = json['jam_minum'] ?? '08:00';
+    final timeParts = jamMinum.split(':');
+    final timeOfDay = TimeOfDay(
+      hour: int.parse(timeParts[0]), 
+      minute: int.parse(timeParts[1])
+    );
+
+    return Medication(
+      id: json['id'].toString(),
+      name: json['nama_obat'] ?? '',
+      dose: json['takaran'] ?? '',
+      schedule: (timeOfDay.hour < 12) ? 'Pagi' : 'Malam',
+      time: timeOfDay,
+      notes: json['aturan_makan'] ?? json['notes'] ?? '',
+      status: MedicationStatusExtension.fromJsonString(json['status'] ?? 'belumWaktunya'),
+      photoPath: json['photo_path'],
+      reportedAt: json['reported_at'] != null ? DateTime.parse(json['reported_at']) : null,
+    );
+  }
+
   // Method untuk mengirim data ke API (misal saat lapor minum obat)
   Map<String, dynamic> toJson() {
     return {
@@ -71,6 +93,19 @@ class Medication {
       'photoPath': photoPath,
       'reportedAt': reportedAt?.toIso8601String(),
       'notes': notes,
+    };
+  }
+
+  // Method untuk update Supabase
+  Map<String, dynamic> toSupabase() {
+    return {
+      'nama_obat': name,
+      'takaran': dose,
+      'jam_minum': '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+      'aturan_makan': notes,
+      'status': status.toJsonString(),
+      'photo_path': photoPath,
+      'reported_at': reportedAt?.toIso8601String(),
     };
   }
 }
@@ -102,9 +137,21 @@ class MedicationHistory {
       reportedAt: json['reportedAt'] != null ? DateTime.parse(json['reportedAt']) : null,
     );
   }
+
+  factory MedicationHistory.fromSupabase(Map<String, dynamic> json) {
+    return MedicationHistory(
+      medicationName: json['nama_obat'] ?? '',
+      dose: json['takaran'] ?? '',
+      scheduledAt: json['reported_at'] != null ? DateTime.parse(json['reported_at']) : DateTime.now(),
+      status: MedicationStatusExtension.fromJsonString(json['status'] ?? 'belumWaktunya'),
+      photoPath: json['photo_path'],
+      reportedAt: json['reported_at'] != null ? DateTime.parse(json['reported_at']) : null,
+    );
+  }
 }
 
 class Patient {
+  final String id; // Kita butuh ID UUID riil dari database
   final String name;
   final String registrationNo;
   final String patientId;
@@ -114,10 +161,12 @@ class Patient {
   final int durationMonths;
   final String phase;
   final String nurseName;
+  final String nurseId; // Simpan juga nurse ID
   final String clinicName;
   final String clinicAddress;
 
   Patient({
+    required this.id,
     required this.name,
     required this.registrationNo,
     required this.patientId,
@@ -127,23 +176,43 @@ class Patient {
     required this.durationMonths,
     required this.phase,
     required this.nurseName,
+    this.nurseId = '',
     required this.clinicName,
     required this.clinicAddress,
   });
 
   factory Patient.fromJson(Map<String, dynamic> json) {
     return Patient(
+      id: json['id'] ?? '',
       name: json['name'],
-      registrationNo: json['registrationNo'],
-      patientId: json['patientId'],
-      phone: json['phone'],
-      email: json['email'],
+      registrationNo: json['registrationNo'] ?? '',
+      patientId: json['patientId'] ?? '',
+      phone: json['phone'] ?? '',
+      email: json['email'] ?? '',
       startDate: DateTime.parse(json['startDate']),
-      durationMonths: json['durationMonths'],
-      phase: json['phase'],
-      nurseName: json['nurseName'],
-      clinicName: json['clinicName'],
-      clinicAddress: json['clinicAddress'],
+      durationMonths: json['durationMonths'] ?? 6,
+      phase: json['phase'] ?? 'Intensif',
+      nurseName: json['nurseName'] ?? '',
+      clinicName: json['clinicName'] ?? '',
+      clinicAddress: json['clinicAddress'] ?? '',
+    );
+  }
+
+  factory Patient.fromSupabase(Map<String, dynamic> json) {
+    return Patient(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      registrationNo: json['registration_no'] ?? 'TBC-2026-038291',
+      patientId: json['registration_no'] ?? 'TB-2026-001',
+      phone: json['phone'] ?? '',
+      email: json['email'] ?? '',
+      startDate: json['start_date'] != null ? DateTime.parse(json['start_date']) : DateTime.now(),
+      durationMonths: json['duration_months'] != null ? int.parse(json['duration_months'].toString()) : 6,
+      phase: json['phase'] ?? 'Intensif',
+      nurseName: json['perawat_name'] ?? 'Ns. Dewi Lestari',
+      nurseId: json['perawat_id'] ?? '',
+      clinicName: json['clinic_name'] ?? 'Puskesmas Kecamatan',
+      clinicAddress: json['clinic_address'] ?? 'Jl. Kesehatan No. 123, Jakarta',
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import 'login_page.dart';
 import '../../../../service/api_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -34,6 +35,9 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void _submit() async {
+    print('=== DEBUG SUPABASE ===');
+    print('URL: ${dotenv.env['SUPABASE_URL']}');
+    print('KEY: ${dotenv.env['SUPABASE_ANON_KEY']?.substring(0, 50)}...');
     if (_nameCtrl.text.trim().isEmpty ||
         _emailCtrl.text.trim().isEmpty ||
         _phoneCtrl.text.trim().isEmpty ||
@@ -62,6 +66,7 @@ class _RegisterPageState extends State<RegisterPage> {
         _nameCtrl.text.trim(),
         _emailCtrl.text.trim(),
         _passCtrl.text,
+        _phoneCtrl.text.trim(),
       );
 
       if (!mounted) return;

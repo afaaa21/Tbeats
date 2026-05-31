@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../data/app_data.dart';
 import '../../../../models/models.dart';
 import '../../../../widgets/medication_icon.dart';
+import '../../../../service/api_service.dart';
 import 'lapor_page.dart';
 
 class BerandaPage extends StatefulWidget {
@@ -14,10 +14,95 @@ class BerandaPage extends StatefulWidget {
 }
 
 class _BerandaPageState extends State<BerandaPage> {
+  final ApiService _apiService = ApiService();
+  Patient? _patient;
+  List<Medication> _meds = [];
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final profileData = await _apiService.getProfileInfo();
+      
+      String perawatName = "Ns. Dewi Lestari";
+      if (profileData['perawat_id'] != null) {
+        try {
+          final nurseProfile = await _apiService.getPasienDetail(profileData['perawat_id']);
+          perawatName = nurseProfile['name'] ?? perawatName;
+        } catch (_) {}
+      }
+      
+      profileData['perawat_name'] = perawatName;
+      final loadedPatient = Patient.fromSupabase(profileData);
+
+      final medsData = await _apiService.getJadwalObatKu();
+      final loadedMeds = medsData.map((m) => Medication.fromSupabase(m)).toList();
+
+      if (!mounted) return;
+      setState(() {
+        _patient = loadedPatient;
+        _meds = loadedMeds;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final patient = AppData.patient;
-    final meds = AppData.todayMedications;
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primaryContainer),
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        body: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline_rounded, size: 64, color: AppColors.danger),
+              const SizedBox(height: 16),
+              const Text('Gagal Memuat Data', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const SizedBox(height: 8),
+              Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _loadData,
+                  child: const Text('Coba Lagi'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final patient = _patient!;
+    final meds = _meds;
     final tepat = meds.where((m) => m.status == MedicationStatus.sudahDiminum).length;
     final telat = meds.where((m) => m.status == MedicationStatus.terlambat).length;
     final lewat = meds.where((m) => m.status == MedicationStatus.terlewat).length;
@@ -52,7 +137,7 @@ class _BerandaPageState extends State<BerandaPage> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async => setState(() {}),
+        onRefresh: _loadData,
         color: AppColors.primaryContainer,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -206,14 +291,27 @@ class _BerandaPageState extends State<BerandaPage> {
                 ],
               ),
               const SizedBox(height: 12),
-              ...meds.map((m) => _MedCard(
-                    med: m,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => LaporPage(medication: m)),
-                    ).then((_) => setState(() {})),
-                  )),
+              if (meds.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Center(
+                    child: Text('Belum ada jadwal obat hari ini.', style: TextStyle(color: AppColors.textSecondary)),
+                  ),
+                )
+              else
+                ...meds.map((m) => _MedCard(
+                      med: m,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => LaporPage(medication: m)),
+                      ).then((_) => _loadData()),
+                    )),
               const SizedBox(height: 80),
             ],
           ),

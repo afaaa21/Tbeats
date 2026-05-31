@@ -1,8 +1,18 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../models/models.dart';
+import '../../../service/api_service.dart';
 
 class ReportDetailScreen extends StatelessWidget {
-  const ReportDetailScreen({super.key});
+  final Medication medication;
+  final Patient patient;
+
+  const ReportDetailScreen({
+    super.key,
+    required this.medication,
+    required this.patient,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -57,10 +67,7 @@ class ReportDetailScreen extends StatelessWidget {
         children: [
           // Fullscreen Photo
           Positioned.fill(
-            child: Image.network(
-              'https://images.unsplash.com/photo-1550572017-edd951b55104?w=800',
-              fit: BoxFit.cover,
-            ),
+            child: _buildImage(medication.photoPath),
           ),
 
           // Corner Frames
@@ -71,11 +78,37 @@ class ReportDetailScreen extends StatelessWidget {
             alignment: Alignment.bottomCenter,
             child: _buildBottomSheet(context),
           ),
-
-          // Success Feedback (managed by StatefulWidget in production)
         ],
       ),
     );
+  }
+
+  Widget _buildImage(String? path) {
+    if (path == null || path.isEmpty) {
+      return Image.network(
+        'https://images.unsplash.com/photo-1550572017-edd951b55104?w=800',
+        fit: BoxFit.cover,
+      );
+    }
+    if (path.startsWith('http') || path.startsWith('https')) {
+      return Image.network(
+        path,
+        fit: BoxFit.cover,
+      );
+    } else {
+      final file = File(path);
+      if (file.existsSync()) {
+        return Image.file(
+          file,
+          fit: BoxFit.cover,
+        );
+      } else {
+        return Image.network(
+          'https://images.unsplash.com/photo-1550572017-edd951b55104?w=800',
+          fit: BoxFit.cover,
+        );
+      }
+    }
   }
 
   List<Widget> _buildCornerFrames() {
@@ -102,6 +135,10 @@ class ReportDetailScreen extends StatelessWidget {
   }
 
   Widget _buildBottomSheet(BuildContext context) {
+    final hour = medication.time.hour.toString().padLeft(2, '0');
+    final minute = medication.time.minute.toString().padLeft(2, '0');
+    final timeLabel = '$hour:$minute WIB';
+
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surface,
@@ -130,12 +167,12 @@ class ReportDetailScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Budi Santoso',
-                          style: TextStyle(
+                          patient.name,
+                          style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
                             color: AppColors.textPrimary,
@@ -143,8 +180,8 @@ class ReportDetailScreen extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'ID: PAS-002931',
-                          style: TextStyle(
+                          'ID: ${patient.registrationNo}',
+                          style: const TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary,
                             fontFamily: 'PlusJakartaSans',
@@ -155,19 +192,27 @@ class ReportDetailScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppColors.warning.withOpacity(0.15),
+                        color: medication.status == MedicationStatus.terlambat
+                            ? AppColors.warning.withOpacity(0.15)
+                            : AppColors.success.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(99),
                       ),
-                      child: const Row(
+                      child: Row(
                         children: [
-                          Icon(Icons.schedule, color: AppColors.warning, size: 16),
-                          SizedBox(width: 6),
+                          Icon(
+                            medication.status == MedicationStatus.terlambat ? Icons.schedule : Icons.check_circle,
+                            color: medication.status == MedicationStatus.terlambat ? AppColors.warning : AppColors.success,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
                           Text(
-                            'TERLAMBAT 2J 45M',
+                            medication.status == MedicationStatus.terlambat
+                                ? 'TERLAMBAT'
+                                : 'TEPAT WAKTU',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.warning,
+                              color: medication.status == MedicationStatus.terlambat ? AppColors.warning : AppColors.success,
                               fontFamily: 'PlusJakartaSans',
                             ),
                           ),
@@ -198,35 +243,37 @@ class ReportDetailScreen extends StatelessWidget {
                             child: const Icon(Icons.medication_outlined, color: AppColors.primary),
                           ),
                           const SizedBox(width: 12),
-                          const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'OAT Kategori 1',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
-                                  fontFamily: 'PlusJakartaSans',
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  medication.name,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                    fontFamily: 'PlusJakartaSans',
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                'Dosis: 4 Tablet (Fase Intensif)',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                  fontFamily: 'PlusJakartaSans',
+                                Text(
+                                  'Dosis: ${medication.dose} (${patient.phase})',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                    fontFamily: 'PlusJakartaSans',
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ],
                       ),
                       const Divider(height: 24, color: Color(0x1A3F4943)),
-                      const Row(
+                      Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
+                          const Text(
                             'Jadwal Seharusnya',
                             style: TextStyle(
                               fontSize: 12,
@@ -235,8 +282,8 @@ class ReportDetailScreen extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '08:00 WIB',
-                            style: TextStyle(
+                            timeLabel,
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary,
@@ -248,12 +295,75 @@ class ReportDetailScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+
+                // Patient reported notes
+                if (medication.notes != null && medication.notes!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.warning.withOpacity(0.2)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.edit_note, color: AppColors.warning, size: 18),
+                            SizedBox(width: 6),
+                            Text(
+                              'Catatan Keluhan Pasien:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.warning,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          medication.notes!,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textPrimary,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 24),
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () async {
+                          try {
+                            await ApiService().updateMedicationStatus(medication.id, 'terlewat');
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Laporan minum obat ditolak'),
+                                  backgroundColor: AppColors.danger,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                              Navigator.pop(context, true);
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Gagal menolak laporan: $e'), backgroundColor: AppColors.danger),
+                              );
+                            }
+                          }
+                        },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.danger,
                           side: BorderSide(color: AppColors.danger.withOpacity(0.2)),
@@ -274,15 +384,26 @@ class ReportDetailScreen extends StatelessWidget {
                     Expanded(
                       flex: 2,
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Verifikasi Berhasil'),
-                              backgroundColor: AppColors.success,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                          Navigator.pop(context);
+                        onPressed: () async {
+                          try {
+                            await ApiService().updateMedicationStatus(medication.id, 'sudahDiminum');
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Verifikasi Laporan Berhasil'),
+                                  backgroundColor: AppColors.success,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                              Navigator.pop(context, true);
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Gagal memverifikasi laporan: $e'), backgroundColor: AppColors.danger),
+                              );
+                            }
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
