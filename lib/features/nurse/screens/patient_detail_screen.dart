@@ -71,6 +71,221 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     }
   }
 
+  void _showEditPatientSheet() {
+    final nameCtrl = TextEditingController(text: widget.patient.name);
+    final phoneCtrl = TextEditingController(text: widget.patient.phone);
+    final durationCtrl = TextEditingController(text: widget.patient.durationMonths.toString());
+    final dokterCtrl = TextEditingController(text: widget.patient.dokterName);
+    final clinicCtrl = TextEditingController(text: widget.patient.clinicName);
+    final addressCtrl = TextEditingController(text: widget.patient.clinicAddress);
+    String phase = widget.patient.phase;
+    bool saving = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20, right: 20, top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).padding.bottom + 24),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  const Text('Ubah Data Pasien',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary)),
+                ]),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nama Lengkap',
+                    prefixIcon: Icon(Icons.person_outline_rounded)),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'Nomor Handphone',
+                    prefixIcon: Icon(Icons.phone_outlined)),
+                ),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<String>(
+                  value: phase,
+                  decoration: const InputDecoration(
+                    labelText: 'Fase Pengobatan',
+                    prefixIcon: Icon(Icons.show_chart_rounded)),
+                  items: const [
+                    DropdownMenuItem(value: 'Intensif', child: Text('Intensif')),
+                    DropdownMenuItem(value: 'Lanjutan', child: Text('Lanjutan')),
+                  ],
+                  onChanged: (v) { if (v != null) setModalState(() => phase = v); },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: durationCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Durasi Pengobatan (Bulan)',
+                    prefixIcon: Icon(Icons.calendar_today_outlined)),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: dokterCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Dokter Penanggung Jawab',
+                    prefixIcon: Icon(Icons.medical_services_outlined)),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: clinicCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nama Klinik/Puskesmas',
+                    prefixIcon: Icon(Icons.local_hospital_outlined)),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: addressCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Alamat Klinik',
+                    prefixIcon: Icon(Icons.map_outlined)),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: saving ? null : () async {
+                      if (nameCtrl.text.trim().isEmpty || phoneCtrl.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Nama lengkap dan nomor handphone wajib diisi.')));
+                        return;
+                      }
+                      setModalState(() => saving = true);
+                      try {
+                        final duration = int.tryParse(durationCtrl.text.trim()) ?? 6;
+                        final Map<String, dynamic> updates = {
+                          'name': nameCtrl.text.trim(),
+                          'phone': phoneCtrl.text.trim(),
+                          'phase': phase,
+                          'duration_months': duration,
+                          'dokter_name': dokterCtrl.text.trim(),
+                          'clinic_name': clinicCtrl.text.trim(),
+                          'clinic_address': addressCtrl.text.trim(),
+                        };
+
+                        await _apiService.updateProfile(widget.patient.id, updates);
+                        
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                            content: Text('Data pasien berhasil diubah'),
+                            backgroundColor: AppColors.success,
+                          ));
+                          Navigator.pop(context, true);
+                        }
+                      } catch (e) {
+                        setModalState(() => saving = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text('Gagal mengubah data pasien: $e'), backgroundColor: AppColors.danger));
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryContainer,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: saving
+                        ? const SizedBox(width: 20, height: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text('Simpan Perubahan',
+                            style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeletePatient() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Hapus Pasien?',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: RichText(
+          text: TextSpan(
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.5),
+            children: [
+              const TextSpan(text: 'Apakah Anda yakin ingin menghapus '),
+              TextSpan(
+                text: widget.patient.name,
+                style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              ),
+              const TextSpan(text: '?\n\nSemua jadwal obat dan riwayat kepatuhannya akan dihapus secara permanen.'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              setState(() => _isLoading = true);
+              try {
+                await _apiService.hapusPasien(widget.patient.id);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Pasien ${widget.patient.name} berhasil dihapus'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                  Navigator.pop(context, true);
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Gagal menghapus pasien: $e'),
+                      backgroundColor: AppColors.danger,
+                    ),
+                  );
+                }
+                setState(() => _isLoading = false);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAddMedSheet() {
     final nameCtrl = TextEditingController();
     final doseCtrl = TextEditingController();
@@ -93,7 +308,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         builder: (ctx, setModalState) => Padding(
           padding: EdgeInsets.only(
             left: 20, right: 20, top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).padding.bottom + 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,6 +425,210 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     );
   }
 
+  void _showEditMedicationSheet(Medication med) {
+    final nameCtrl = TextEditingController(text: med.name);
+    final doseCtrl = TextEditingController(text: med.dose);
+    TimeOfDay? time = med.time;
+    String aturan = med.notes?.isNotEmpty == true ? med.notes! : 'Sebelum makan pagi';
+    bool saving = false;
+
+    const aturanOptions = [
+      'Sebelum makan pagi', 'Sesudah makan pagi',
+      'Sebelum makan siang', 'Sesudah makan siang',
+      'Sebelum makan malam', 'Sesudah makan malam', 'Kapan saja',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20, right: 20, top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).padding.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                const Text('Ubah Jadwal Obat',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary)),
+              ]),
+              const SizedBox(height: 4),
+              Text('Untuk: ${widget.patient.name}',
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+              const SizedBox(height: 20),
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Nama Obat',
+                  prefixIcon: Icon(Icons.medication_outlined)),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: doseCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Dosis',
+                  prefixIcon: Icon(Icons.science_outlined)),
+              ),
+              const SizedBox(height: 14),
+              GestureDetector(
+                onTap: () async {
+                  final t = await showTimePicker(
+                    context: ctx, initialTime: time ?? const TimeOfDay(hour: 7, minute: 0));
+                  if (t != null) setModalState(() => time = t);
+                },
+                child: Container(
+                  height: 52,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.outlineVariant),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(children: [
+                    const Icon(Icons.access_time_rounded, color: AppColors.outline, size: 20),
+                    const SizedBox(width: 12),
+                    Text(
+                      time == null
+                          ? 'Pilih Jam Minum'
+                          : '${time!.hour.toString().padLeft(2, '0')}:${time!.minute.toString().padLeft(2, '0')} WIB',
+                      style: TextStyle(
+                        color: time == null ? AppColors.textSecondary : AppColors.textPrimary, fontSize: 14),
+                    ),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                value: aturanOptions.contains(aturan) ? aturan : 'Sebelum makan pagi',
+                decoration: const InputDecoration(
+                  labelText: 'Aturan Makan',
+                  prefixIcon: Icon(Icons.restaurant_menu_outlined)),
+                items: aturanOptions.map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
+                onChanged: (v) { if (v != null) setModalState(() => aturan = v); },
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: saving ? null : () async {
+                    if (nameCtrl.text.trim().isEmpty || doseCtrl.text.trim().isEmpty || time == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Nama obat, dosis, dan jam wajib diisi.')));
+                      return;
+                    }
+                    setModalState(() => saving = true);
+                    try {
+                      final h = time!.hour.toString().padLeft(2, '0');
+                      final m = time!.minute.toString().padLeft(2, '0');
+                      await _apiService.updateMedicationDetails(
+                        med.id,
+                        nameCtrl.text.trim(),
+                        doseCtrl.text.trim(),
+                        '$h:$m',
+                        aturan,
+                      );
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      _loadData();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Jadwal obat berhasil diperbarui'),
+                          backgroundColor: AppColors.success,
+                        ));
+                      }
+                    } catch (e) {
+                      setModalState(() => saving = false);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('Gagal: $e'), backgroundColor: AppColors.danger));
+                      }
+                    }
+                  },
+                  child: saving
+                      ? const SizedBox(width: 20, height: 20,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('Simpan Jadwal Obat',
+                          style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteMedication(Medication med) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Hapus Jadwal Obat?',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: RichText(
+          text: TextSpan(
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.5),
+            children: [
+              const TextSpan(text: 'Apakah Anda yakin ingin menghapus jadwal obat '),
+              TextSpan(
+                text: med.name,
+                style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              ),
+              const TextSpan(text: '?\n\nTindakan ini tidak dapat dibatalkan.'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              setState(() => _isLoading = true);
+              try {
+                await _apiService.hapusMedication(med.id);
+                _loadData();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Jadwal obat ${med.name} berhasil dihapus'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Gagal menghapus obat: $e'),
+                      backgroundColor: AppColors.danger,
+                    ),
+                  );
+                }
+                setState(() => _isLoading = false);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _updateStatus(String medId, MedicationStatus status) async {
     try {
       setState(() => _isLoading = true);
@@ -257,6 +676,18 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_rounded),
+            onPressed: () => _showEditPatientSheet(),
+            tooltip: 'Ubah Data Pasien',
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded),
+            onPressed: () => _confirmDeletePatient(),
+            tooltip: 'Hapus Pasien',
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppColors.onPrimary,
@@ -312,6 +743,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                       onConfirm: (id) => _updateStatus(id, MedicationStatus.sudahDiminum),
                       onReject: (id) => _updateStatus(id, MedicationStatus.terlewat),
                       onRefresh: _loadData,
+                      onEdit: (med) => _showEditMedicationSheet(med),
+                      onDelete: (med) => _confirmDeleteMedication(med),
                     ),
                     _WeekHistoryTab(
                       patient: widget.patient,
@@ -329,6 +762,8 @@ class _TodayEvidenceTab extends StatelessWidget {
   final Function(String) onConfirm;
   final Function(String) onReject;
   final Future<void> Function() onRefresh;
+  final Function(Medication) onEdit;
+  final Function(Medication) onDelete;
 
   const _TodayEvidenceTab({
     required this.patient,
@@ -336,6 +771,8 @@ class _TodayEvidenceTab extends StatelessWidget {
     required this.onConfirm,
     required this.onReject,
     required this.onRefresh,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   @override
@@ -509,6 +946,8 @@ class _TodayEvidenceTab extends StatelessWidget {
                       onRefresh();
                     }
                   },
+                  onEdit: () => onEdit(med),
+                  onDelete: () => onDelete(med),
                 ),
               );
             }),
@@ -699,6 +1138,8 @@ class _MedicineVerificationCard extends StatelessWidget {
   final VoidCallback onConfirm;
   final VoidCallback onReject;
   final VoidCallback onTap;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   const _MedicineVerificationCard({
     required this.med,
@@ -710,6 +1151,8 @@ class _MedicineVerificationCard extends StatelessWidget {
     required this.onConfirm,
     required this.onReject,
     required this.onTap,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   @override
@@ -756,93 +1199,142 @@ class _MedicineVerificationCard extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      medicineName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                        fontFamily: 'PlusJakartaSans',
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        medicineName,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                          fontFamily: 'PlusJakartaSans',
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    if (time != null)
-                      Row(
-                        children: [
-                          Container(
-                            margin: const EdgeInsets.only(right: 6),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: status == MedicineStatus.verified
-                                  ? AppColors.success.withOpacity(0.15)
-                                  : AppColors.warning.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              status == MedicineStatus.verified ? 'SUDAH DIMINUM' : 'TERLAMBAT',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w700,
+                      if (time != null)
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
                                 color: status == MedicineStatus.verified
-                                    ? AppColors.success
-                                    : AppColors.warning,
+                                    ? AppColors.success.withOpacity(0.15)
+                                    : AppColors.warning.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                status == MedicineStatus.verified ? 'SUDAH DIMINUM' : 'TERLAMBAT',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: status == MedicineStatus.verified
+                                      ? AppColors.success
+                                      : AppColors.warning,
+                                  fontFamily: 'PlusJakartaSans',
+                                ),
+                              ),
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.access_time, size: 12, color: AppColors.textSecondary),
+                                const SizedBox(width: 2),
+                                Text(
+                                  time!,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                    fontFamily: 'PlusJakartaSans',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        )
+                      else
+                        const Row(
+                          children: [
+                            Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textSecondary),
+                            SizedBox(width: 4),
+                            Text(
+                              'Belum lapor',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
                                 fontFamily: 'PlusJakartaSans',
                               ),
                             ),
-                          ),
-                          const Icon(Icons.access_time, size: 12, color: AppColors.textSecondary),
-                          const SizedBox(width: 2),
-                          Text(
-                            time!,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                              fontFamily: 'PlusJakartaSans',
-                            ),
-                          ),
-                        ],
-                      )
-                    else
-                      const Row(
-                        children: [
-                          Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textSecondary),
-                          SizedBox(width: 4),
-                          Text(
-                            'Belum lapor',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                              fontFamily: 'PlusJakartaSans',
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: statusBg,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(statusIcon, size: 14, color: statusColor),
-                      const SizedBox(width: 4),
-                      Text(
-                        statusLabel,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: statusColor,
-                          fontFamily: 'PlusJakartaSans',
+                          ],
                         ),
-                      ),
                     ],
                   ),
+                ),
+                const SizedBox(width: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: statusBg,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(statusIcon, size: 14, color: statusColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            statusLabel,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: statusColor,
+                              fontFamily: 'PlusJakartaSans',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert_rounded, color: AppColors.outline),
+                      onSelected: (val) {
+                        if (val == 'edit') {
+                          onEdit();
+                        } else if (val == 'delete') {
+                          onDelete();
+                        }
+                      },
+                      itemBuilder: (ctx) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_outlined, size: 18, color: AppColors.textPrimary),
+                              SizedBox(width: 8),
+                              Text('Ubah Obat'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.danger),
+                              SizedBox(width: 8),
+                              Text('Hapus Obat', style: TextStyle(color: AppColors.danger)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ],
             ),

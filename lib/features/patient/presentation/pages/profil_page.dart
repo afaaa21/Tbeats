@@ -3,6 +3,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import '../../../../service/api_service.dart';
 import '../../../../models/models.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfilPage extends StatefulWidget {
   const ProfilPage({super.key});
@@ -15,11 +16,23 @@ class _ProfilPageState extends State<ProfilPage> {
   Patient? _patient;
   bool _isLoading = true;
   String? _error;
+  int _reminderInterval = 30;
+  String _nursePhone = '';
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
+    _loadReminderInterval();
+  }
+
+  Future<void> _loadReminderInterval() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _reminderInterval = prefs.getInt('reminder_interval_minutes') ?? 30;
+      });
+    }
   }
 
   Future<void> _loadProfile() async {
@@ -30,10 +43,12 @@ class _ProfilPageState extends State<ProfilPage> {
       final profileData = await _apiService.getProfileInfo();
 
       String perawatName = '';
+      String perawatPhone = '';
       if (profileData['perawat_id'] != null) {
         try {
           final nurseProfile = await _apiService.getPasienDetail(profileData['perawat_id']);
           perawatName = nurseProfile['name'] ?? '';
+          perawatPhone = nurseProfile['phone'] ?? '';
         } catch (_) {}
       }
 
@@ -43,6 +58,7 @@ class _ProfilPageState extends State<ProfilPage> {
       if (!mounted) return;
       setState(() {
         _patient = loaded;
+        _nursePhone = perawatPhone;
         _isLoading = false;
       });
     } catch (e) {
@@ -178,6 +194,8 @@ class _ProfilPageState extends State<ProfilPage> {
               _card(children: [
                 _infoRow(Icons.calendar_today_outlined, 'Mulai Pengobatan', startStr),
                 const SizedBox(height: 12),
+                _infoRow(Icons.medical_services_outlined, 'Dokter Penanggung Jawab', patient.dokterName.isEmpty ? '-' : patient.dokterName),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
@@ -194,6 +212,7 @@ class _ProfilPageState extends State<ProfilPage> {
 
               // Perawat Pendamping
               if (patient.nurseName.isNotEmpty) ...[
+                _sectionTitle('Perawat Pendamping'),
                 _card(children: [
                   Row(
                     children: [
@@ -207,26 +226,51 @@ class _ProfilPageState extends State<ProfilPage> {
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text(patient.nurseName,
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
-                          const Text('Perawat Pendamping',
-                            style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                          const SizedBox(height: 2),
+                          Text(_nursePhone.isNotEmpty ? 'No. Telp: $_nursePhone' : 'No. Telp: -',
+                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                         ]),
                       ),
-                      GestureDetector(
-                        onTap: () => _showCallDialog(patient.nurseName),
-                        child: Container(
-                          width: 42, height: 42,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primaryContainer,
-                            shape: BoxShape.circle,
+                      if (_nursePhone.isNotEmpty)
+                        GestureDetector(
+                          onTap: () => _showCallDialog(patient.nurseName, _nursePhone),
+                          child: Container(
+                            width: 42, height: 42,
+                            decoration: const BoxDecoration(
+                              color: AppColors.primaryContainer,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.phone_rounded, color: Colors.white, size: 20),
                           ),
-                          child: const Icon(Icons.phone_rounded, color: Colors.white, size: 20),
                         ),
-                      ),
                     ],
                   ),
                 ]),
                 const SizedBox(height: 14),
               ],
+
+              // Pengaturan Pengingat
+              _sectionTitle('Pengaturan Pengingat'),
+              _card(children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryContainer.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.notifications_active_outlined, color: AppColors.primaryContainer),
+                  ),
+                  title: const Text('Interval Pengingat',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
+                  subtitle: Text('Diingatkan kembali setiap $_reminderInterval menit jika belum lapor',
+                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.outline),
+                  onTap: () => _showReminderIntervalSheet(),
+                ),
+              ]),
+              const SizedBox(height: 14),
 
               // Keluar
               SizedBox(
@@ -309,13 +353,13 @@ class _ProfilPageState extends State<ProfilPage> {
     );
   }
 
-  void _showCallDialog(String name) {
+  void _showCallDialog(String name, String phone) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Hubungi Perawat'),
-        content: Text('Menghubungi $name?'),
+        content: Text('Hubungi $name di nomor $phone?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context),
             child: const Text('Batal', style: TextStyle(color: AppColors.textSecondary))),
@@ -357,6 +401,136 @@ class _ProfilPageState extends State<ProfilPage> {
             child: const Text('Keluar', style: TextStyle(color: Colors.white)),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showReminderIntervalSheet() {
+    final customCtrl = TextEditingController(text: _reminderInterval.toString());
+    int selected = _reminderInterval;
+    
+    final standards = [10, 15, 20, 30];
+    bool isCustomSelected = !standards.contains(selected);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20, right: 20, top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).padding.bottom + 24),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  const Text('Atur Interval Pengingat',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary)),
+                ]),
+                const SizedBox(height: 8),
+                const Text('Aplikasi akan berbunyi/mengingatkan Anda kembali jika jam obat telah tiba dan Anda belum melaporkan bukti foto.',
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4)),
+                const SizedBox(height: 16),
+                
+                // Standard Options
+                ...[10, 15, 20, 30].map((mins) => RadioListTile<int>(
+                  value: mins,
+                  groupValue: isCustomSelected ? null : selected,
+                  title: Text('$mins Menit'),
+                  activeColor: AppColors.primaryContainer,
+                  contentPadding: EdgeInsets.zero,
+                  onChanged: (v) {
+                    if (v != null) {
+                      setModalState(() {
+                        selected = v;
+                        isCustomSelected = false;
+                      });
+                    }
+                  },
+                )),
+                
+                // Custom Option
+                RadioListTile<int>(
+                  value: 0,
+                  groupValue: isCustomSelected ? 0 : null,
+                  title: const Text('Menit Kustom (Input Sendiri)'),
+                  activeColor: AppColors.primaryContainer,
+                  contentPadding: EdgeInsets.zero,
+                  onChanged: (v) {
+                    setModalState(() {
+                      isCustomSelected = true;
+                    });
+                  },
+                ),
+                
+                if (isCustomSelected) ...[
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: customCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Masukkan Menit Pengingat',
+                      suffixText: 'Menit',
+                      prefixIcon: Icon(Icons.timer_outlined)),
+                    onChanged: (val) {
+                      final intValue = int.tryParse(val) ?? 30;
+                      selected = intValue;
+                    },
+                  ),
+                ],
+                
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      int valToSave = selected;
+                      if (isCustomSelected) {
+                        valToSave = int.tryParse(customCtrl.text.trim()) ?? 30;
+                      }
+                      
+                      if (valToSave <= 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Interval pengingat harus lebih dari 0 menit.')));
+                        return;
+                      }
+                      
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setInt('reminder_interval_minutes', valToSave);
+                      
+                      if (mounted) {
+                        setState(() {
+                          _reminderInterval = valToSave;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('Interval pengingat diatur setiap $valToSave menit'),
+                          backgroundColor: AppColors.success,
+                        ));
+                      }
+                      
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryContainer,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Simpan Pengaturan', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

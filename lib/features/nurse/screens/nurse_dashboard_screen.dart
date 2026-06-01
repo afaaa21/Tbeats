@@ -663,7 +663,7 @@ class _PatientRowItem extends StatelessWidget {
       case PatientStatus.late:
         statusBg = AppColors.warning.withOpacity(0.15);
         statusColor = AppColors.warning;
-        statusLabel = 'TERLAMBAT / BUTUH VERIFIKASI';
+        statusLabel = 'BUTUH VERIFIKASI';
         break;
       case PatientStatus.notReported:
         statusBg = AppColors.statusNeutral.withOpacity(0.15);
@@ -708,6 +708,8 @@ class _PatientRowItem extends StatelessWidget {
                 children: [
                   Text(
                     name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -717,6 +719,8 @@ class _PatientRowItem extends StatelessWidget {
                   ),
                   Text(
                     'ID: $id • Fase: $schedule',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary,
@@ -726,6 +730,7 @@ class _PatientRowItem extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(

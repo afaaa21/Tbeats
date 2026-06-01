@@ -4,6 +4,7 @@ import '../../../../models/models.dart';
 import '../../../../widgets/medication_icon.dart';
 import '../../../../service/api_service.dart';
 import 'lapor_page.dart';
+import 'dart:async';
 
 class BerandaPage extends StatefulWidget {
   final VoidCallback onGoToJadwal;
@@ -19,11 +20,30 @@ class _BerandaPageState extends State<BerandaPage> {
   List<Medication> _meds = [];
   bool _isLoading = true;
   String? _error;
+  Timer? _clockTimer;
+  DateTime _currentTime = DateTime.now();
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _startClock();
+  }
+
+  @override
+  void dispose() {
+    _clockTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startClock() {
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _currentTime = DateTime.now();
+        });
+      }
+    });
   }
 
   Future<void> _loadData() async {
@@ -172,6 +192,7 @@ class _BerandaPageState extends State<BerandaPage> {
                   ],
                 ),
               ),
+              _buildRealTimeClockCard(),
 
               // Alert banner jika ada yang terlewat
               if (hasMissed) ...[
@@ -418,6 +439,145 @@ class _BerandaPageState extends State<BerandaPage> {
     );
   }
 
+  Widget _buildRealTimeClockCard() {
+    final hour = _currentTime.hour.toString().padLeft(2, '0');
+    final minute = _currentTime.minute.toString().padLeft(2, '0');
+    final second = _currentTime.second.toString().padLeft(2, '0');
+    
+    // Ticking colon
+    final colon = _currentTime.second % 2 == 0 ? ':' : ' ';
+    final timeStr = '$hour$colon$minute$colon$second WIB';
+
+    // Find next medication
+    Medication? nextMed;
+    Duration? minDiff;
+    final now = DateTime.now();
+
+    for (var m in _meds) {
+      if (m.status == MedicationStatus.sudahDiminum) continue;
+      
+      final medHour = m.time.hour;
+      final medMin = m.time.minute;
+      
+      final medTime = DateTime(now.year, now.month, now.day, medHour, medMin);
+      final diff = medTime.difference(_currentTime);
+      
+      if (minDiff == null || diff.inSeconds.abs() < minDiff.inSeconds.abs() || (diff.inSeconds > 0 && minDiff.inSeconds < 0)) {
+        if (nextMed == null) {
+          nextMed = m;
+          minDiff = diff;
+        } else {
+          final currentIsFuture = diff.inSeconds > 0;
+          final prevIsFuture = minDiff!.inSeconds > 0;
+          if (currentIsFuture && !prevIsFuture) {
+            nextMed = m;
+            minDiff = diff;
+          } else if (currentIsFuture == prevIsFuture) {
+            if (diff.inSeconds.abs() < minDiff!.inSeconds.abs()) {
+              nextMed = m;
+              minDiff = diff;
+            }
+          }
+        }
+      }
+    }
+
+    String countdownText = "Semua jadwal obat hari ini selesai! 🎉";
+    Color countdownColor = AppColors.success;
+    IconData countdownIcon = Icons.check_circle_outline_rounded;
+
+    if (nextMed != null && minDiff != null) {
+      final hours = minDiff.inHours.abs();
+      final minutes = (minDiff.inMinutes.abs() % 60);
+      final seconds = (minDiff.inSeconds.abs() % 60);
+      final formattedTime = "${nextMed.time.hour.toString().padLeft(2, '0')}:${nextMed.time.minute.toString().padLeft(2, '0')}";
+      
+      if (minDiff.inSeconds > 0) {
+        countdownIcon = Icons.alarm_rounded;
+        countdownColor = AppColors.primaryContainer;
+        countdownText = "Obat berikutnya: ${nextMed.name} ($formattedTime WIB) dalam $hours jam $minutes menit $seconds detik";
+      } else {
+        countdownIcon = Icons.warning_amber_rounded;
+        countdownColor = AppColors.warning;
+        countdownText = "Terlambat minum ${nextMed.name} ($formattedTime WIB) - lewat $hours jam $minutes menit $seconds detik!";
+      }
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+        border: Border.all(color: countdownColor.withOpacity(0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary),
+                  const SizedBox(width: 8),
+                  Text(
+                    _formatDate(now),
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryContainer.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Text(
+                  timeStr,
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primaryContainer,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 20, color: AppColors.surfaceContainer),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(countdownIcon, color: countdownColor, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  countdownText,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: countdownColor == AppColors.primaryContainer ? AppColors.textPrimary : countdownColor,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime dt) {
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    return '${days[dt.weekday % 7]}, ${dt.day} ${months[dt.month - 1]} ${dt.year}';
+  }
+
   Widget _notifTile(IconData icon, String title, String sub, Color color) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
@@ -471,8 +631,9 @@ class _MedCard extends StatelessWidget {
                     color: AppColors.textSecondary, fontSize: 13)),
             trailing: _statusWidget(),
           ),
-          if (med.status == MedicationStatus.terlambat ||
-              med.status == MedicationStatus.belumDilaporkan)
+          if ((med.status == MedicationStatus.terlambat ||
+              med.status == MedicationStatus.belumDilaporkan) &&
+              (med.photoPath == null || med.photoPath!.isEmpty))
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: SizedBox(
@@ -488,7 +649,8 @@ class _MedCard extends StatelessWidget {
                 ),
               ),
             ),
-          if (med.status == MedicationStatus.terlewat)
+          if (med.status == MedicationStatus.terlewat &&
+              (med.photoPath == null || med.photoPath!.isEmpty))
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: SizedBox(
@@ -514,6 +676,9 @@ class _MedCard extends StatelessWidget {
   }
 
   Color _borderColor() {
+    if (med.photoPath != null && med.photoPath!.isNotEmpty && med.status != MedicationStatus.sudahDiminum) {
+      return AppColors.secondary;
+    }
     switch (med.status) {
       case MedicationStatus.sudahDiminum:
         return AppColors.success;
@@ -528,6 +693,9 @@ class _MedCard extends StatelessWidget {
   }
 
   Widget _statusWidget() {
+    if (med.photoPath != null && med.photoPath!.isNotEmpty && med.status != MedicationStatus.sudahDiminum) {
+      return _chip('Sudah Kirim Foto', AppColors.secondary, const Color(0x1F006492));
+    }
     switch (med.status) {
       case MedicationStatus.sudahDiminum:
         return _chip('Sudah Diminum', AppColors.success, AppColors.successLight);

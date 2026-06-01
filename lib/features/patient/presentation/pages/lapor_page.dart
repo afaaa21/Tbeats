@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -85,6 +86,120 @@ class _LaporPageState extends State<LaporPage> {
       _photoTaken = false;
       _pickedImagePath = null;
     });
+  }
+
+  void _showFullImagePreview() {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Dark dismissible background
+            GestureDetector(
+              onTap: () => Navigator.pop(ctx),
+              child: Container(
+                color: Colors.transparent,
+                width: double.infinity,
+                height: double.infinity,
+              ),
+            ),
+            // Image card
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black54,
+                    blurRadius: 20,
+                    offset: Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.6,
+                      ),
+                      child: Image.file(
+                        File(_pickedImagePath!),
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    Container(
+                      color: Colors.white,
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'Pratinjau Foto Laporan',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: AppColors.textPrimary,
+                                    fontFamily: 'PlusJakartaSans',
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Obat: ${widget.medication.name}',
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 13,
+                                    fontFamily: 'PlusJakartaSans',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              _retakePhoto();
+                            },
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.danger,
+                            ),
+                            icon: const Icon(Icons.flip_camera_ios_rounded, size: 18),
+                            label: const Text(
+                              'Ambil Ulang',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'PlusJakartaSans',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Floating Close button on top right of screen
+            Positioned(
+              top: 0,
+              right: 0,
+              child: IconButton(
+                icon: const Icon(Icons.close_rounded, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _submit() async {
@@ -268,7 +383,7 @@ class _LaporPageState extends State<LaporPage> {
                               ],
                             ),
                             Text(
-                              '${med.dose}',
+                              med.dose,
                               style: const TextStyle(
                                   color: AppColors.textSecondary, fontSize: 13),
                             ),
@@ -315,7 +430,13 @@ class _LaporPageState extends State<LaporPage> {
             const SizedBox(height: 12),
 
             GestureDetector(
-              onTap: _photoTaken ? _retakePhoto : _takePhoto,
+              onTap: () {
+                if (_photoTaken) {
+                  _showFullImagePreview();
+                } else {
+                  _takePhoto();
+                }
+              },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 width: double.infinity,
@@ -334,29 +455,109 @@ class _LaporPageState extends State<LaporPage> {
                   ),
                 ),
                 child: _photoTaken
-                    ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 64,
-                            height: 64,
-                            decoration: const BoxDecoration(
-                                color: AppColors.success,
-                                shape: BoxShape.circle),
-                            child: const Icon(Icons.check_rounded,
-                                color: Colors.white, size: 36),
-                          ),
-                          const SizedBox(height: 12),
-                          const Text('Foto Berhasil Diambil',
-                              style: TextStyle(
-                                  color: AppColors.success,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16)),
-                          const SizedBox(height: 4),
-                          const Text('Tap untuk ambil ulang',
-                              style: TextStyle(
-                                  color: AppColors.textSecondary, fontSize: 13)),
-                        ],
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.file(
+                              File(_pickedImagePath!),
+                              fit: BoxFit.cover,
+                            ),
+                            // Gradient overlay
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withOpacity(0.1),
+                                    Colors.black.withOpacity(0.65),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            // Info text & action
+                            Positioned(
+                              bottom: 12,
+                              left: 12,
+                              right: 12,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Foto Bukti Obat',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          fontFamily: 'PlusJakartaSans',
+                                        ),
+                                      ),
+                                      SizedBox(height: 2),
+                                      Text(
+                                        'Ketuk untuk memperbesar',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 11,
+                                          fontFamily: 'PlusJakartaSans',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.success,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Row(
+                                      children: [
+                                        Icon(Icons.check_circle_rounded, color: Colors.white, size: 14),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Siap Kirim',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 10,
+                                            fontFamily: 'PlusJakartaSans',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Retake button top right
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: GestureDetector(
+                                onTap: () {
+                                  _retakePhoto();
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.5),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.flip_camera_ios_rounded,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       )
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,

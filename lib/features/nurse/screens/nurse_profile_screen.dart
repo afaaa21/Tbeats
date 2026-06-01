@@ -3,6 +3,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../service/api_service.dart';
 import '../../auth/presentation/pages/login_page.dart';
 import '../../../models/models.dart';
+import '../../../core/config/supabase_config.dart';
 
 class NurseProfileScreen extends StatefulWidget {
   const NurseProfileScreen({super.key});
@@ -23,6 +24,126 @@ class _NurseProfileScreenState extends State<NurseProfileScreen> {
   String _bergabungSejak = '';
   String _clinicName = 'Puskesmas Kecamatan';
   String _clinicAddress = 'Jl. Kesehatan No. 123';
+
+  void _showEditProfileSheet() {
+    final nameCtrl = TextEditingController(text: _nurseName);
+    final phoneCtrl = TextEditingController(text: _nursePhone);
+    final clinicCtrl = TextEditingController(text: _clinicName);
+    final addressCtrl = TextEditingController(text: _clinicAddress);
+    bool saving = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20, right: 20, top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).padding.bottom + 24),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  const Text('Ubah Profil Saya',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary)),
+                ]),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nama Lengkap',
+                    prefixIcon: Icon(Icons.person_outline_rounded)),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'Nomor Handphone',
+                    prefixIcon: Icon(Icons.phone_outlined)),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: clinicCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nama Faskes',
+                    prefixIcon: Icon(Icons.local_hospital_outlined)),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: addressCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Alamat Faskes',
+                    prefixIcon: Icon(Icons.map_outlined)),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: saving ? null : () async {
+                      if (nameCtrl.text.trim().isEmpty || phoneCtrl.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Nama lengkap dan nomor handphone wajib diisi.')));
+                        return;
+                      }
+                      setModalState(() => saving = true);
+                      try {
+                        final Map<String, dynamic> updates = {
+                          'name': nameCtrl.text.trim(),
+                          'phone': phoneCtrl.text.trim(),
+                          'clinic_name': clinicCtrl.text.trim(),
+                          'clinic_address': addressCtrl.text.trim(),
+                        };
+
+                        final currentUser = SupabaseConfig.client.auth.currentUser;
+                        if (currentUser == null) throw 'Sesi tidak ditemukan.';
+                        await _apiService.updateProfile(currentUser.id, updates);
+                        
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        
+                        await _loadProfile();
+                        
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                            content: Text('Profil berhasil diperbarui'),
+                            backgroundColor: AppColors.success,
+                          ));
+                        }
+                      } catch (e) {
+                        setModalState(() => saving = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text('Gagal: $e'), backgroundColor: AppColors.danger));
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryContainer,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: saving
+                        ? const SizedBox(width: 20, height: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text('Simpan Perubahan', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -166,6 +287,11 @@ class _NurseProfileScreenState extends State<NurseProfileScreen> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: _showEditProfileSheet,
+            tooltip: 'Ubah Profil',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: _loadProfile,

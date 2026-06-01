@@ -400,8 +400,51 @@ class ApiService {
     }
   }
 
+  // HAPUS PASIEN (Oleh Perawat)
+  Future<void> hapusPasien(String patientId) async {
+    try {
+      // 1. Hapus semua jadwal obat pasien terlebih dahulu
+      await _client.from('medications').delete().eq('user_id', patientId);
+      
+      // 2. Hapus baris profil pasien secara langsung (diizinkan oleh kebijakan RLS DELETE profiles yang baru)
+      await _client.from('profiles').delete().eq('id', patientId);
+    } catch (e) {
+      throw 'Gagal menghapus pasien: $e';
+    }
+  }
+
   // LOGOUT
   Future<void> logout() async {
     await _client.auth.signOut();
   }
+
+  // UPDATE MEDICATION DETAILS (Oleh Pasien atau Perawat)
+  Future<void> updateMedicationDetails(
+    String medId,
+    String namaObat,
+    String takaran,
+    String jamMinum,
+    String aturanMakan,
+  ) async {
+    try {
+      await _client.from('medications').update({
+        'nama_obat': namaObat,
+        'takaran': takaran,
+        'jam_minum': jamMinum,
+        'aturan_makan': aturanMakan,
+      }).eq('id', medId);
+    } catch (e) {
+      throw 'Gagal memperbarui detail obat: $e';
+    }
+  }
+
+  // HAPUS MEDICATION (Oleh Pasien atau Perawat)
+  Future<void> hapusMedication(String medId) async {
+    try {
+      await _client.from('medications').delete().eq('id', medId);
+    } catch (e) {
+      throw 'Gagal menghapus obat: $e';
+    }
+  }
 }
+

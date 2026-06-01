@@ -149,3 +149,11 @@ CREATE INDEX IF NOT EXISTS idx_profiles_perawat_id
 
 -- Dokter can view patients they are assigned to (same structure as perawat)
 -- The existing RLS policies already cover dokter since they use the same perawat_id foreign key
+
+-- ==============================================================================
+-- 9. KEBIJAKAN DELETE PROFILES (Mengizinkan Perawat Menghapus Pasien)
+-- ==============================================================================
+CREATE POLICY "Perawat can delete their own pasiens" ON public.profiles
+  FOR DELETE USING (
+    auth.uid() = perawat_id
+  );

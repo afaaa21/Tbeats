@@ -165,6 +165,7 @@ class Patient {
   final String phase;
   final String nurseName;
   final String nurseId; // Simpan juga nurse ID
+  final String dokterName;
   final String clinicName;
   final String clinicAddress;
 
@@ -180,6 +181,7 @@ class Patient {
     required this.phase,
     required this.nurseName,
     this.nurseId = '',
+    this.dokterName = '',
     required this.clinicName,
     required this.clinicAddress,
   });
@@ -196,6 +198,7 @@ class Patient {
       durationMonths: json['durationMonths'] ?? 6,
       phase: json['phase'] ?? 'Intensif',
       nurseName: json['nurseName'] ?? '',
+      dokterName: json['dokterName'] ?? '',
       clinicName: json['clinicName'] ?? '',
       clinicAddress: json['clinicAddress'] ?? '',
     );
@@ -214,6 +217,7 @@ class Patient {
       phase: json['phase'] ?? 'Intensif',
       nurseName: json['perawat_name'] ?? 'Ns. Dewi Lestari',
       nurseId: json['perawat_id'] ?? '',
+      dokterName: json['dokter_name'] ?? '',
       clinicName: json['clinic_name'] ?? 'Puskesmas Kecamatan',
       clinicAddress: json['clinic_address'] ?? 'Jl. Kesehatan No. 123, Jakarta',
     );
