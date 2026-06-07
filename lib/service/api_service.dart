@@ -339,8 +339,7 @@ class ApiService {
     Map<String, dynamic> updates,
   ) async {
     try {
-      final Map<String, dynamic> upsertData = {'id': profileId, ...updates};
-      await _client.from('profiles').upsert(upsertData);
+      await _client.from('profiles').update(updates).eq('id', profileId);
     } catch (e) {
       throw 'Gagal mengupdate profil: $e';
     }
@@ -447,4 +446,3 @@ class ApiService {
     }
   }
 }
-
