@@ -593,7 +593,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       bottomNavigationBar: _isSaving
           ? null
           : Container(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 10 : 20),
               color: AppColors.surface,
               child: ElevatedButton.icon(
                 onPressed: _submit,

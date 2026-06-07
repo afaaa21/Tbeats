@@ -290,6 +290,7 @@ class _PatientMainWrapperState extends State<PatientMainWrapper> {
         ],
       ),
       bottomNavigationBar: Container(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [BoxShadow(

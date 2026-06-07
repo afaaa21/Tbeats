@@ -222,7 +222,7 @@ class _TambahObatPageState extends State<TambahObatPage> {
         ),
       ),
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+        padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom > 0 ? MediaQuery.of(context).padding.bottom + 12 : 28),
         color: AppColors.surface,
         child: SizedBox(
           height: 52,
