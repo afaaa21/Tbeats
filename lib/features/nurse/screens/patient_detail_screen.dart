@@ -5,7 +5,6 @@ import 'report_detail_screen.dart';
 import '../../../models/models.dart';
 import '../../../service/api_service.dart';
 import '../../../core/config/supabase_config.dart';
-import '../../../widgets/medication_icon.dart';
 
 class PatientDetailScreen extends StatefulWidget {
   final Patient patient;
@@ -78,7 +77,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     final dokterCtrl = TextEditingController(text: widget.patient.dokterName);
     final clinicCtrl = TextEditingController(text: widget.patient.clinicName);
     final addressCtrl = TextEditingController(text: widget.patient.clinicAddress);
-    String phase = widget.patient.phase;
+    const phaseOptions = ['Intensif', 'Lanjutan'];
+    String phase = phaseOptions.contains(widget.patient.phase)
+        ? widget.patient.phase
+        : phaseOptions.first;
     bool saving = false;
 
     showModalBottomSheet(
@@ -125,10 +127,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                   decoration: const InputDecoration(
                     labelText: 'Fase Pengobatan',
                     prefixIcon: Icon(Icons.show_chart_rounded)),
-                  items: const [
-                    DropdownMenuItem(value: 'Intensif', child: Text('Intensif')),
-                    DropdownMenuItem(value: 'Lanjutan', child: Text('Lanjutan')),
-                  ],
+                  items: phaseOptions
+                      .map((option) => DropdownMenuItem(value: option, child: Text(option)))
+                      .toList(),
                   onChanged: (v) { if (v != null) setModalState(() => phase = v); },
                 ),
                 const SizedBox(height: 14),
@@ -1524,4 +1525,4 @@ class _MedicineVerificationCard extends StatelessWidget {
       }
     }
   }
-}
+}
